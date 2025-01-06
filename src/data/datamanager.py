@@ -13,8 +13,7 @@ class DataManager():
         self.column_mapper = cm.ColumnMapper()
         self.df = self.column_mapper.get_blank_df()
         self.ds = dl.load_data(args)
-        
-        self.serialize_ds()
+        self.merge_data()
 
 
     def serialize_ds(self):
@@ -33,3 +32,7 @@ class DataManager():
         
         output.write_json('output.json')
         return output
+    
+    def merge_data(self):
+        self.df = self.column_mapper.map_shroom2024(self.df, self.ds['shroom2024']['train'].to_polars())
+        pass

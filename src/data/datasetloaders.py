@@ -1,6 +1,11 @@
 import os
 import datasets
+from tqdm import tqdm
+import pickle
+import hashlib
+from src.utils.decorators import cache_decorator
 
+@cache_decorator("loaded_datasets")
 def load_data(args):
     """ Returns all possible datasets unless there are explicit datasets specified
         under args.datasets. 
@@ -18,7 +23,7 @@ def load_data(args):
 
     # Determine which datasets to load
     datasets_to_load = args.datasets if args.datasets else dataset_loaders.keys()
-    loaded_datasets = {name: loader() for name, loader in dataset_loaders.items() if name in datasets_to_load}
+    loaded_datasets = {name: loader() for name, loader in tqdm(dataset_loaders.items(), "Loading datasets") if name in datasets_to_load}
     return loaded_datasets
 
     
