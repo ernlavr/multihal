@@ -15,24 +15,30 @@ class DataManager():
         self.ds = dl.load_data(args)
         self.merge_data()
 
+        self.serialize_ds(per_ds=5)
 
-    def serialize_ds(self):
+
+    def serialize_ds(self, per_ds: int = None):
         """ Serializes the datasets into the main dataframe """
-        output = pl.DataFrame([], {'source': str})
-        for ds_name, ds in self.ds.items():
-            for subset in ds.keys():
-                df = ds[subset].to_polars()
-                head = df.head(1)
+        os.makedirs('data', exist_ok=True)
+        if per_ds is None:
+            self.df.write_csv('data/data.csv')
+        else:
+            sampled_df = pl.DataFrame()
+            for dataset_name in self.ds.keys():
+                dataset = self.df.filter(self.df['source_dataset'] == dataset_name)
+                sampled_dataset = dataset.sample(n=per_ds)
+                sampled_df = sampled_df.vstack(sampled_dataset)
+            sampled_df.write_csv('data/data_sampled.csv')
 
-                head = head.rename(lambda col_name : ds_name + '_' + col_name)
-
-
-                # add the dataset by new columns
-                output = pl.concat([output, head], how='diagonal_relaxed')
-        
-        output.write_json('output.json')
-        return output
     
     def merge_data(self):
-        self.df = self.column_mapper.map_shroom2024(self.df, self.ds['shroom2024']['train'].to_polars())
-        pass
+        self.df = self.column_mapper.merge_shroom2024(self.df, self.ds['shroom2024']['train'].to_polars(), 'DM')
+        self.df = self.column_mapper.merge_shroom2025(self.df, self.ds['shroom2025']['train'].to_polars(), 'DM')
+        self.df = self.column_mapper.merge_halueval(self.df, self.ds['halueval']['val'].to_polars())
+        self.df = self.column_mapper.merge_truthfulqa_gen(self.df, self.ds['tqa_gen']['val'].to_polars())
+        self.df = self.column_mapper.merge_felm(self.df, self.ds['felm']['val'].to_polars())
+        self.df = self.column_mapper.merge_halubench(self.df, self.ds['halubench']['val'].to_polars())
+        self.df = self.column_mapper.merge_defan(self.df, self.ds['defan']['val'].to_polars())
+        self.df = self.column_mapper.merge_simpleqa(self.df, self.ds['simpleqa']['val'].to_polars())
+        

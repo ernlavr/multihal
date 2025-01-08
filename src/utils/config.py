@@ -1,5 +1,8 @@
 import argparse 
 import src.utils.singleton as singl
+import torch
+import random
+import numpy as np
 
 class GlobalConfig(metaclass=singl.Singleton):
     def __init__(self):
@@ -16,4 +19,10 @@ class GlobalConfig(metaclass=singl.Singleton):
     
     def get_args(self):
         return self._args
+    
+    def set_random_seeds(self, seed=42):
+        torch.manual_seed(seed)
+        random.seed(seed)
+        np.random.seed(seed)
+        return seed
     
