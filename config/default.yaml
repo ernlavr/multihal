@@ -1,0 +1,18 @@
+# General Settings
+num_workers: 4
+seed: 42          # Seed for all random-based function calls
+log_level: INFO
+device: cuda      # 'cuda' if torch.cuda.is_available() else 'cpu'
+
+# Data Settings
+data_dir: data
+datasets:
+
+# Control Settings
+debug_mode: true             # Debug mode
+n_pds: 5                     # Number of datapoints to sample for debugging
+gen_anal_figs: False
+gen_sent_embeds: true
+
+# Model Settings
+sentence_embedder: sentence-transformers/all-MiniLM-L6-v2  # HuggingFace or local path

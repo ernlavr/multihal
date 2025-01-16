@@ -12,33 +12,56 @@ class DataManager():
     def __init__(self, args):
         self.column_mapper = cm.ColumnMapper()
         self.df = self.column_mapper.get_blank_df()
+        self.df_pp = self.column_mapper.get_blank_df()
+        self.args = args
         self.ds = dl.load_data(args)
+
+        self.ds_paraphrased = {}
+        # extract the "_paraphrased" splits
+        for i, data in self.ds.items():
+            if (key := 'val_paraphrased') in data:
+                self.ds_paraphrased[i] = datasets.DatasetDict({key: data.pop(key)})
+                
+        
         self.merge_data()
+        self.serialize_ds()
 
-        self.serialize_ds(per_ds=5)
 
-
-    def serialize_ds(self, per_ds: int = None):
+    def serialize_ds(self):
         """ Serializes the datasets into the main dataframe """
-        os.makedirs('data', exist_ok=True)
-        if per_ds is None:
-            self.df.write_csv('data/data.csv')
-        else:
-            sampled_df = pl.DataFrame()
-            for dataset_name in self.ds.keys():
-                dataset = self.df.filter(self.df['source_dataset'] == dataset_name)
-                sampled_dataset = dataset.sample(n=per_ds)
-                sampled_df = sampled_df.vstack(sampled_dataset)
-            sampled_df.write_csv('data/data_sampled.csv')
+        data_dir = 'output/data'
+        os.makedirs(data_dir, exist_ok=True)
+
+        if self.args.debug_mode:
+            self.df.sample(n=self.args.n_pds).write_csv(os.path.join(data_dir, 'data_sampled.csv'))
+
+        if self.args.save_full_data:
+            self.df.write_csv(os.path.join(data_dir, 'multihal_unprocessed.csv'))
+        
 
     
     def merge_data(self):
-        self.df = self.column_mapper.merge_shroom2024(self.df, self.ds['shroom2024']['train'].to_polars(), 'DM')
-        self.df = self.column_mapper.merge_shroom2025(self.df, self.ds['shroom2025']['train'].to_polars(), 'DM')
-        self.df = self.column_mapper.merge_halueval(self.df, self.ds['halueval']['val'].to_polars())
-        self.df = self.column_mapper.merge_truthfulqa_gen(self.df, self.ds['tqa_gen']['val'].to_polars())
-        self.df = self.column_mapper.merge_felm(self.df, self.ds['felm']['val'].to_polars())
-        self.df = self.column_mapper.merge_halubench(self.df, self.ds['halubench']['val'].to_polars())
-        self.df = self.column_mapper.merge_defan(self.df, self.ds['defan']['val'].to_polars())
-        self.df = self.column_mapper.merge_simpleqa(self.df, self.ds['simpleqa']['val'].to_polars())
-        
+        merge_funcs = {
+            'shroom2024': self.column_mapper.merge_shroom2024,
+            'shroom2025': self.column_mapper.merge_shroom2025,
+            'halueval': self.column_mapper.merge_halueval,
+            'tqa_gen': self.column_mapper.merge_truthfulqa_gen,
+            'felm': self.column_mapper.merge_felm,
+            'halubench': self.column_mapper.merge_halubench,
+            'defan': self.column_mapper.merge_defan,
+            'simpleqa': self.column_mapper.merge_simpleqa,
+        }
+
+        for ds in self.args.datasets:
+            # assert len(self.ds[ds].keys()) == 1, "Only one split per dataset is supported"
+            for split in list(self.ds[ds].keys()):
+                if 'paraphrased' in split:
+                    self.df_pp = merge_funcs[ds](self.df_pp, self.ds_paraphrased[ds][split].to_polars())
+                else:
+                    self.df = merge_funcs[ds](self.df, self.ds[ds][split].to_polars())
+
+
+        self.df = self.df.with_columns(pl.col('domain').str.to_lowercase())
+        # fill in missing values
+        self.df = self.df.with_columns(pl.col("domain").replace(None, "N/A"))
+        self.df = self.column_mapper.encode_domains(self.df)

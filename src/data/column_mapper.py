@@ -1,7 +1,9 @@
 import polars as pl
 from datasets import Dataset
+from src.utils.singleton import Singleton
+import src.utils.config as config
 
-class ColumnMapper():
+class ColumnMapper(metaclass=Singleton):
     def __init__(self):
         """ Defines column names of MultiHal and mappings of source datasets to MultiHal columns """
         self.ID = 'id'   # identifier to the data point
@@ -15,10 +17,22 @@ class ColumnMapper():
         self.INCORRECT_ANSWERS = 'incorrect_answers' # incorrect outputs
         self.CONTEXT = 'context' # context for the data point
         self.CONTEXT_TYPE = 'context_type' # type of context, web or passage
-        self.LIST_SEP = '; '
 
     def get_blank_df(self):
         return pl.DataFrame([], self.get_multihal_columns())
+    
+    def encode_domains(self, data: pl.DataFrame):
+        return data.with_columns(
+            pl.col('domain')
+            .rank('dense')
+            .cast(pl.Int64).name.suffix('_encoded')
+        )
+    
+    def get_domain_mappings(self):
+        domains = {
+
+        }
+        return domains
 
     def get_multihal_columns(self):
         return {
@@ -125,6 +139,8 @@ class ColumnMapper():
             'problem': self.INPUT,
             'answer': self.OUTPUT,
             'task': self.TASK,
+            'context': self.CONTEXT,
+            'domain': self.DOMAIN,
         }
 
         return mappings
@@ -196,10 +212,10 @@ class ColumnMapper():
         """ Converts columns with list type to string type """
         list_columns = [col for col in ds.columns if ds[col].dtype == pl.datatypes.List(pl.datatypes.String)]
         for col in list_columns:
-            ds.replace_column(ds.get_column_index(col), ds[col].list.join("; "))
+            ds.replace_column(ds.get_column_index(col), ds[col].list.join(config.LIST_SEP))
         return ds    
 
-    def merge_shroom2024(self, multihal: pl.DataFrame, shroom2024: pl.DataFrame, task) -> pl.DataFrame:
+    def merge_shroom2024(self, multihal: pl.DataFrame, shroom2024: pl.DataFrame, task='DM') -> pl.DataFrame:
         if task != 'all':
             shroom2024 = shroom2024.filter(pl.col('task') == task)
         mappings = self.get_shroom2024_mappings(task)
@@ -207,19 +223,19 @@ class ColumnMapper():
         merged = self.add_metadata(merged, shroom2024, 'shroom2024')
         return merged
     
-    def merge_shroom2025(self, multihal: pl.DataFrame, shroom2025: pl.DataFrame, task) -> pl.DataFrame:
+    def merge_shroom2025(self, multihal: pl.DataFrame, shroom2025: pl.DataFrame, task='DM') -> pl.DataFrame:
         mappings = self.get_shroom2025_mappings()
         merged = self.merge_dataframes(multihal, shroom2025, mappings)
         merged = self.add_metadata(merged, shroom2025, 'shroom2025')
         return merged
     
-    def merge_halueval(self, multihal: pl.DataFrame, halueval: pl.DataFrame) -> pl.DataFrame:
+    def merge_halueval(self, multihal: pl.DataFrame, halueval: pl.DataFrame, task=None) -> pl.DataFrame:
         mappings = self.get_halueval_mappings()
         merged = self.merge_dataframes(multihal, halueval, mappings)
         merged = self.add_metadata(merged, halueval, 'halueval')
         return merged
 
-    def merge_truthfulqa_gen(self, multihal: pl.DataFrame, tqa_gen: pl.DataFrame) -> pl.DataFrame:
+    def merge_truthfulqa_gen(self, multihal: pl.DataFrame, tqa_gen: pl.DataFrame, task=None) -> pl.DataFrame:
         mappings = self.get_tqa_gen_mappings()
         # Preprocess tqa_gen, it contains lists of strings so we need to convert them to strings  
         tqa_gen = self.convert_list_str_to_str(tqa_gen)  
@@ -228,7 +244,7 @@ class ColumnMapper():
         merged = self.add_metadata(merged, tqa_gen, 'tqa_gen')
         return merged
     
-    def merge_felm(self, multihal: pl.DataFrame, felm: pl.DataFrame) -> pl.DataFrame:
+    def merge_felm(self, multihal: pl.DataFrame, felm: pl.DataFrame, task=None) -> pl.DataFrame:
         mappings = self.get_felm_mappings()
         felm = self.convert_list_str_to_str(felm)
 
@@ -239,21 +255,21 @@ class ColumnMapper():
         merged = self.add_metadata(merged, felm, 'felm')
         return merged
     
-    def merge_halubench(self, multihal: pl.DataFrame, halubench: pl.DataFrame) -> pl.DataFrame:
+    def merge_halubench(self, multihal: pl.DataFrame, halubench: pl.DataFrame, task=None) -> pl.DataFrame:
         mappings = self.get_halubench_mappings()
         # remove rows from halubench where 'source_ds' is 'halubench'
-        halubench = halubench.filter(pl.col('source_ds') != 'halubench')
+        halubench = halubench.filter(pl.col('source_ds') != 'halueval')
         merged = self.merge_dataframes(multihal, halubench, mappings)
         merged = self.add_metadata(merged, halubench, 'halubench')
         return merged
     
-    def merge_defan(self, multihal: pl.DataFrame, defan: pl.DataFrame) -> pl.DataFrame:
+    def merge_defan(self, multihal: pl.DataFrame, defan: pl.DataFrame, task=None) -> pl.DataFrame:
         mappings = self.defan_mappings()
         merged = self.merge_dataframes(multihal, defan, mappings)
         merged = self.add_metadata(merged, defan, 'defan')
         return merged
     
-    def merge_simpleqa(self, multihal: pl.DataFrame, simpleqa: pl.DataFrame) -> pl.DataFrame:
+    def merge_simpleqa(self, multihal: pl.DataFrame, simpleqa: pl.DataFrame, task=None) -> pl.DataFrame:
         mappings = self.get_simpleqa_mappings()
         merged = self.merge_dataframes(multihal, simpleqa, mappings)
         merged = self.add_metadata(merged, simpleqa, 'simpleqa')
