@@ -15,9 +15,13 @@ def plot_ds_stats(df: pl.DataFrame):
     # datapoints per context where context isnt null
     dp_with_context = df['context'].filter(df['context'].is_not_null()).count()
 
-    draw_pie_chart(dp_per_dataset, 'source_dataset', number_of_dp)
-    draw_pie_chart(dp_per_domain, 'domain', number_of_dp)
-    draw_pie_chart(dp_per_task, 'task', number_of_dp)
+    draw_pie_chart(dp_per_dataset, 'source_dataset', 'source_datasets', number_of_dp)
+    draw_pie_chart(dp_per_domain, 'domain', 'domains', number_of_dp)
+    draw_pie_chart(dp_per_task, 'task', 'tasks', number_of_dp)
+
+    # draw non-N/A domains
+    dp_per_domain = dp_per_domain.filter(dp_per_domain['domain'] != 'N/A')
+    draw_pie_chart(dp_per_domain, 'domain', 'domains_non_na', number_of_dp)
 
     # get nulls/non_nulls
     nulls = df['context'].is_null()
@@ -37,23 +41,23 @@ def plot_ds_stats(df: pl.DataFrame):
 
     # self.draw_pie_chart(dp_with_context, 'context', number_of_dp)
 
-def draw_pie_chart(data: pl.DataFrame, figname, total_dp):
-    os.makedirs("output/figures", exist_ok=True)
+def draw_pie_chart(data: pl.DataFrame, label_col, figname, total_dp):
+    os.makedirs("output/figures/basic_stats", exist_ok=True)
 
     # increase fontsize
     plt.rcParams.update({'font.size': 12})
 
     plt.figure(figsize=(10, 7))
     plt.text(-1.2, 1.2, f"Total Datapoints: {total_dp}", fontsize=12)
-    plt.pie(data['count'], labels=data[figname], autopct='%1.1f%%', startangle=140)
+    plt.pie(data['count'], labels=data[label_col], autopct='%1.1f%%', startangle=140)
     plt.axis('equal')
     plt.tight_layout()
-    plt.savefig(f'output/figures/{figname}.png')
+    plt.savefig(f'output/figures/basic_stats/{figname}.png')
     plt.close()
 
 def draw_3col_pie_chart(data: pl.DataFrame):
     # Ensure the output directory exists
-    os.makedirs("output/figures", exist_ok=True)
+    os.makedirs("output/figures/basic_stats", exist_ok=True)
     
     # Set the theme and font size for the plot
 
@@ -68,11 +72,11 @@ def draw_3col_pie_chart(data: pl.DataFrame):
     plt.tight_layout()
 
     # Save the figure
-    plt.savefig(f'output/figures/null_nonnull_pie_chart.png')
+    plt.savefig(f'output/figures/basic_stats/null_nonnull_pie_chart.png')
     plt.close()
 
 def plot_histogram(data: pl.DataFrame, bin_count=10):
-    os.makedirs("output/figures", exist_ok=True)
+    os.makedirs("output/figures/basic_stats", exist_ok=True)
     hist = data['similarities'].hist(bin_count=bin_count)
 
     plt.figure(figsize=(10, 7))
@@ -80,5 +84,5 @@ def plot_histogram(data: pl.DataFrame, bin_count=10):
     plt.xlabel('Length of Context')
     plt.ylabel('Frequency')
     plt.title('Histogram of Context Length')
-    plt.savefig('output/figures/histogram.png')
+    plt.savefig('output/figures/basic_stats/histogram.png')
     plt.close()

@@ -95,7 +95,7 @@ class GlobalConfig(metaclass=singl.Singleton):
             # Control
             debug_mode=True,                # Debug mode
             n_pds=5,                        # Number of datapoints to sample for debugging
-            gen_anal_figs=False,
+            gen_anlyz_figs=False,
             gen_sent_embeds=False,
             wandb_online=False,
 

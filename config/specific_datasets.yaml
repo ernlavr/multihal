@@ -7,16 +7,16 @@ device: cuda      # 'cuda' if torch.cuda.is_available() else 'cpu'
 # Data Settings
 data_dir: output/data
 datasets: 
-  - 'defan'
-  - 'tqa_gen'
-
-save_full_data: True
-
+  - 'halubench'
+  - 'felm'
+  
 # Control Settings
 debug_mode: true             # Debug mode
 n_pds: 5                     # Number of datapoints to sample for debugging
-gen_anal_figs: false
+gen_anlyz_figs: false
 gen_sent_embeds: true
+save_full_data: true
+save_basic_stats: true
 
 # kwargs
 

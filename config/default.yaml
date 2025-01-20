@@ -11,7 +11,7 @@ datasets:
 # Control Settings
 debug_mode: true             # Debug mode
 n_pds: 5                     # Number of datapoints to sample for debugging
-gen_anal_figs: False
+gen_anlyz_figs: False
 gen_sent_embeds: true
 
 # Model Settings

@@ -1,6 +1,6 @@
 import src.data.datamanager as dm
 import src.utils.config as config
-import src.analysis.analyser as anal
+import src.analysis.analyser as anlyz
 import src.analysis.figures as fig
 import src.analysis.sentence_embedder as se
 import src.utils.wandb_manager as wbMang
@@ -23,14 +23,15 @@ def main():
     if args.gen_sent_embeds:
         embedder = se.SentenceEmbeddings(data_manager.df, args)
         embeddings = embedder.gen_embeddings(data_manager.df)
-        analyzer = anal.DatasetAnalyser(embeddings, args)
+        analyzer = anlyz.DatasetAnalyser(embeddings, args)
         analyzer.remove_duplicates_by_cossim(embeddings)
+        analyzer.log_domains(embeddings)
         # analyzer.get_sentence_similarities(embeddings, 0.9)
         analyzer.run_precluster_analysis(embeddings)
         analyzer.run_dim_red(embeddings)
 
     # Analysis figures
-    if args.gen_anal_figs:
+    if args.gen_anlyz_figs:
         fig.Plots(data_manager.df).plot_ds_stats()
     
 

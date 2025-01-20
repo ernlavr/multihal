@@ -26,8 +26,16 @@ class DatasetAnalyser():
     def _get_embedding_matrix(self, data):
         return np.array(data['embeddings'].to_list())
     
+    def log_domains(self, data):
+        logging.info("Logging domains")
+        for by_col, sort_flag in [('count', True), ('domain', False)]:
+            sorted_df = data['domain'].value_counts().sort(by=by_col, descending=sort_flag)
+            table_sorted_df = f'Domain, sorted by {by_col}:\n' +  sorted_df.to_pandas().to_string(index=False)
+            logging.info(table_sorted_df)
+    
     def remove_duplicates_by_cossim(self, data, threshold=0.99):
         # Compute the cosine similarity between the embeddings
+        logging.info("Removing duplicates based on cosine similarity")
         matrix = self._get_embedding_matrix(data)
         cos_sim = cosine_similarity(matrix)
 
@@ -80,8 +88,6 @@ class DatasetAnalyser():
 
                 # Replace the column in the dataframe with the updated series
                 df_tmp = df_tmp.with_columns(pl.Series(col_name, col_series))
-
-
         
         # Remove the duplicate rows
         if self.args.debug_mode:
@@ -104,13 +110,7 @@ class DatasetAnalyser():
 
 
         df_tmp = df_tmp.with_row_index().filter(~pl.col("index").is_in(col_)).drop('index')
-
-
-            
-
-
-
-        pass
+        return df_tmp
 
     def generate_clustering_evals(self, data):
         # elbow

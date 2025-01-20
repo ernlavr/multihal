@@ -116,9 +116,9 @@ class ColumnMapper(metaclass=Singleton):
         cols = ['id', 'passage', 'question', 'answer', 'label', 'source_ds']
         mappings = {
             'id': self.ID,
+            'passage': self.CONTEXT,
             'question': self.INPUT,
             'answer': self.OUTPUT,
-            'passage': self.CONTEXT,
         }
         return mappings
 
@@ -256,11 +256,27 @@ class ColumnMapper(metaclass=Singleton):
         return merged
     
     def merge_halubench(self, multihal: pl.DataFrame, halubench: pl.DataFrame, task=None) -> pl.DataFrame:
+        """ Filter out FAIL labels, so we have only truthful answers """
         mappings = self.get_halubench_mappings()
+
         # remove rows from halubench where 'source_ds' is 'halubench'
         halubench = halubench.filter(pl.col('source_ds') != 'halueval')
+
+        # remove rows from halubench where 'label' is not 'FAIL'
+        halubench = halubench.filter(pl.col('label') == 'PASS')
+
+        # map source datasets to domains
+        halubench_domains = {'DROP': 'general', 'covidQA': 'healthcare', 'pubmedQA': 'healthcare', 'FinanceBench': 'finance', 'RAGTruth': 'ragtruth'}
+        
+        halubench = halubench.with_columns(
+            pl.col('source_ds') \
+                .replace(halubench_domains) \
+                .alias('domain')
+        )
+
         merged = self.merge_dataframes(multihal, halubench, mappings)
         merged = self.add_metadata(merged, halubench, 'halubench')
+
         return merged
     
     def merge_defan(self, multihal: pl.DataFrame, defan: pl.DataFrame, task=None) -> pl.DataFrame:

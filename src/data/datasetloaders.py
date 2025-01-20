@@ -24,6 +24,8 @@ def load_data(args):
         'halubench': _load_halubenchmark,
         'defan': _load_defan,
         'simpleqa': _load_simpleQa,
+        
+        'drop': _loadDrop
     }
 
     # Determine which datasets to load
@@ -167,4 +169,10 @@ def _load_simpleQa():
     sep = config.LIST_SEP
     data['val'] = data['val'].add_column('context', [sep.join(i['urls']) for i in metadata])
 
+    return data
+
+@cache_decorator("drop")
+def _loadDrop():
+    """ Loads the DROP dataset """
+    data = datasets.load_dataset('ucinlp/drop')
     return data
