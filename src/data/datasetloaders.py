@@ -70,6 +70,9 @@ def _load_halueval(task='qa'):
 
     # Add extra columns
     data['val'] = data['val'].add_column('task', [task] * data['val'].shape[0])
+
+    # TODO: Possibly fix this with domain modeling, original paper they get knowledge from Wikipedita
+    data['val'] = data['val'].add_column('domain', [task] * data['val'].shape[0])
     return data
 
 @cache_decorator("truthfulqa_gen")
@@ -105,7 +108,10 @@ def _load_halubenchmark():
 
 @cache_decorator("defan")
 def _load_defan() -> datasets.DatasetDict:
-    """Loads and processes the DefAN dataset."""
+    """Loads and processes the DefAN dataset.
+        DefAn contains paraphrased versions of a prompt, 1 question, 14 paraphrases.
+        Therefore, we also capture the paraphrasings seperately with reference to first question.
+    """
     BATCH_SIZE, PARAPHRASE_SIZE = 15, 14
     DEF_AN_DIR = 'res/defan'
     output = datasets.DatasetDict({'val': None, 'val_paraphrased': None})

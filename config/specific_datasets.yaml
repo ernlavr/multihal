@@ -7,8 +7,7 @@ device: cuda      # 'cuda' if torch.cuda.is_available() else 'cpu'
 # Data Settings
 data_dir: output/data
 datasets: 
-  - 'halubench'
-  - 'felm'
+  - 'halueval'
   
 # Control Settings
 debug_mode: true             # Debug mode
