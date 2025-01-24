@@ -5,12 +5,13 @@ import src.data.datasetloaders as dl
 import src.data.column_mapper as cm
 import src.analysis.figures as fig
 import logging
+import src.utils.singleton as sing
 
 # TODO:
 # - Add configs for including only specific datasets
 # - Add configs for including subsets of datasets (e.g. see halueval)
 
-class DataManager():
+class DataManager(metaclass=sing.Singleton):
     def __init__(self, args):
         self.column_mapper = cm.ColumnMapper()
         self.df = self.column_mapper.get_blank_df()

@@ -16,18 +16,16 @@ class SentenceEmbeddings():
     def get_embedder(self):
         return SentenceTransformer(self.args.sentence_embedder)
     
-    @dec.cache_decorator("embeddings")
+    
+    @dec.log_execution_time
     def gen_embeddings(self, data: pl.DataFrame):
         if self.args.debug_mode:
             logging.info("Generating embeddings")
 
-        start_time = time.time()
         data = data.with_columns(
             embeddings=pl.col('input').map_elements(lambda x: self.embedder.encode(x).tolist())
         )
-        end_time = time.time()
-        logging.info(f"Embeddings generated in: {end_time - start_time:.2f} seconds; for dataset of size: {data.shape[0]}")
-
+        
         if self.args.debug_mode:
             logging.info("Got embeddings")
             data.write_json('output/data/data_with_embeddings.json')

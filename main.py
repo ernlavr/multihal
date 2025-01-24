@@ -18,15 +18,24 @@ def main():
     # Initialize the data manager
     logging.info("Starting data manager")
     data_manager = dm.DataManager(args)
+    embeddings = None
+    analyzer = None
 
     # Sentence embeddings
     if args.gen_sent_embeds:
         embedder = se.SentenceEmbeddings(data_manager.df, args)
         embeddings = embedder.gen_embeddings(data_manager.df)
         analyzer = anlyz.DatasetAnalyser(embeddings, args)
-        analyzer.remove_duplicates_by_cossim(embeddings)
+
+    if args.remove_duplicates:
+        if args.sent_sim_metric == 'bleu':
+            similarities = analyzer.get_bleu_scores(embeddings)
+            analyzer.remove_duplicates_by_cossim(similarities, threshold=0.7)
+        elif args.sent_sim_metric == 'cosine':
+            similarities = analyzer.get_cossim(embeddings, 0.9)
+            analyzer.remove_duplicates_by_cossim(similarities)
+            
         analyzer.log_domains(embeddings)
-        # analyzer.get_sentence_similarities(embeddings, 0.9)
         analyzer.run_precluster_analysis(embeddings)
         analyzer.run_dim_red(embeddings)
 

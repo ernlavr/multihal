@@ -1,8 +1,12 @@
+from copy import deepcopy
 import polars as pl
 import matplotlib.pyplot as plt
 import os
 import umap
 import logging
+import pickle
+from sacrebleu.metrics import BLEU
+import multiprocessing
 import numpy as np
 import sklearn.cluster as skCluster
 import sklearn.manifold as skManifold
@@ -10,13 +14,50 @@ import sklearn.decomposition as skDecomp
 import sklearn.cluster as skCluster
 from sklearn.metrics import silhouette_samples, silhouette_score
 from sklearn.metrics.pairwise import cosine_similarity
+from itertools import permutations
 
+import src.utils.decorators as dec
 import src.utils.wandb_manager as wbMang
 import src.analysis.cluster as MultihalCluster
 import src.analysis.figures as figs
 import src.utils.config as config
 
+from functools import partial
 from tqdm import tqdm
+
+BLEU_THERSHOLD = 40
+LOWERCASE = True
+MAX_NGRAM_ORDER = 3
+EFFECTIVE_ORDER = True
+BLEU_SCORE_COMPUTE = BLEU(max_ngram_order=MAX_NGRAM_ORDER, effective_order=EFFECTIVE_ORDER, lowercase=LOWERCASE)
+def _compute(args, data):
+    """
+    Computes BLEU scores for each sentence in a hypothesis document against a reference document.
+
+    Args:
+        args (tuple): Contains the hypothesis sentence (doc index, sentence idx, sentence text) and the reference document (split, index and text).
+
+    Returns:
+        dict: Keys are reference document indices. Values are lists of tuples (hypothesis index, sentence index, BLEU score > 20).
+    """
+    col = args[0]
+    row = args[1]
+    col_data = data['input'][col]
+    row_data = data['input'][row]
+    score = BLEU_SCORE_COMPUTE.sentence_score(col_data, [row_data]).score
+    return {'col': col, 'row': row, 'score': score}
+
+@dec.log_execution_time
+def _compute_bleu_score(mappings, df) -> float:
+    """ Computes the bleu score between a list of predictions and references """
+    output = {}
+    chunk_size = 5000
+    cpus = multiprocessing.cpu_count()
+
+    with multiprocessing.Pool(processes=cpus) as pool:
+        result = pool.map_async(partial(_compute, data=df), mappings, chunksize=chunk_size)
+        result.wait()
+        return result.get()
 
 class DatasetAnalyser():
     def __init__(self, df: pl.DataFrame, args):
@@ -32,14 +73,39 @@ class DatasetAnalyser():
             sorted_df = data['domain'].value_counts().sort(by=by_col, descending=sort_flag)
             table_sorted_df = f'Domain, sorted by {by_col}:\n' +  sorted_df.to_pandas().to_string(index=False)
             logging.info(table_sorted_df)
-    
-    def remove_duplicates_by_cossim(self, data, threshold=0.99):
-        # Compute the cosine similarity between the embeddings
-        logging.info("Removing duplicates based on cosine similarity")
-        matrix = self._get_embedding_matrix(data)
-        cos_sim = cosine_similarity(matrix)
 
-        rows, cols = np.where(cos_sim > threshold)
+    @dec.log_execution_time
+    def get_bleu_scores(self, data):
+        length = len(data)
+        matrix = ((col, row) for col in range(length) for row in range(length))
+
+        bleu_scores = _compute_bleu_score(matrix, data)
+        output = np.zeros((length, length), dtype=np.float16)
+
+        # Extract columns, rows, and scores as arrays
+        cols = np.array([i['col'] for i in bleu_scores])
+        rows = np.array([i['row'] for i in bleu_scores])
+        scores = np.array([i['score'] for i in bleu_scores])
+
+        # Assign scores to the output matrix
+        output[cols, rows] = scores
+
+        # pickle output
+        with open('output/bleu_scores.pkl', 'wb') as f:
+            pickle.dump(output, f)
+
+        return output
+
+    def get_cossim(self, data):
+        matrix = self._get_embedding_matrix(data)
+        return cosine_similarity(matrix)
+    
+    def remove_duplicates_by_cossim(self, sim_matrix, threshold=0.99):
+        """ Remove duplicates based on cosine similarity """
+        # Compute the cosine similarity between the embeddings
+        logging.info("Removing duplicates based on similarity")
+
+        rows, cols = np.where(sim_matrix > threshold)
         mask = rows != cols # ignore the diagonal
         rows = rows[mask]
         cols = cols[mask]
@@ -49,7 +115,7 @@ class DatasetAnalyser():
         seen = set()
         for r, c in zip(rows, cols):
             pair = tuple(sorted((r, c)))
-            if pair not in seen and cos_sim[r, c] > threshold:
+            if pair not in seen and sim_matrix[r, c] > threshold:
                 seen.add(pair)
                 row_.append(r.item())
                 col_.append(c.item())
@@ -107,8 +173,6 @@ class DatasetAnalyser():
                 logging.info(f"Ds: {df_tmp['source_dataset'][i[1]]:{max_src_ds}}; Domain: {df_tmp['domain'][i[1]]:{max_domain}}; Target ({df_tmp['id'][i[0]]}): {df_tmp['input'][i[1]]}")
                 logging.info("")
               
-
-
         df_tmp = df_tmp.with_row_index().filter(~pl.col("index").is_in(col_)).drop('index')
         return df_tmp
 
@@ -202,12 +266,6 @@ class DatasetAnalyser():
         similarities_t.write_csv("output/cos_sim_sentence_pairs.csv")
         return None
 
-    
-
-    def get_cosine_similarity(self, data):
-        matrix = self._get_embedding_matrix(data)
-        rows, cols = cosine_similarity(matrix)
-        return rows, cols
 
     def visualize_clusters(self, data, dim_red):
         # Perform dimensionality reduction

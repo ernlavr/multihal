@@ -7,7 +7,12 @@ device: cuda      # 'cuda' if torch.cuda.is_available() else 'cpu'
 # Data Settings
 data_dir: output/data
 datasets: 
+  - 'tqa_gen'
   - 'halueval'
+  - 'halubench'
+  - 'felm'
+  - 'defan'
+  - 'simpleqa'
   
 # Control Settings
 debug_mode: true             # Debug mode
@@ -16,6 +21,8 @@ gen_anlyz_figs: false
 gen_sent_embeds: true
 save_full_data: true
 save_basic_stats: true
+remove_duplicates: true
+sent_sim_metric: 'bleu'
 
 # kwargs
 

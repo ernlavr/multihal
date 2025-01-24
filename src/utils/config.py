@@ -98,6 +98,8 @@ class GlobalConfig(metaclass=singl.Singleton):
             gen_anlyz_figs=False,
             gen_sent_embeds=False,
             wandb_online=False,
+            sent_sim_metric=None,
+            remove_duplicates=False,
 
             # clustering
             clustering_algo=None,
