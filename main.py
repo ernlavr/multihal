@@ -30,10 +30,10 @@ def main():
     if args.remove_duplicates:
         if args.sent_sim_metric == 'bleu':
             similarities = analyzer.get_bleu_scores(embeddings)
-            analyzer.remove_duplicates_by_cossim(similarities, threshold=0.7)
+            removed = analyzer.remove_duplicates_by_sim_matrix(similarities, threshold=0.2, **args.__dict__)
         elif args.sent_sim_metric == 'cosine':
             similarities = analyzer.get_cossim(embeddings, 0.9)
-            analyzer.remove_duplicates_by_cossim(similarities)
+            removed = analyzer.remove_duplicates_by_sim_matrix(similarities, **vars(args))
             
         analyzer.log_domains(embeddings)
         analyzer.run_precluster_analysis(embeddings)

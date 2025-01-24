@@ -45,7 +45,7 @@ def _compute(args, data):
     col_data = data['input'][col]
     row_data = data['input'][row]
     score = BLEU_SCORE_COMPUTE.sentence_score(col_data, [row_data]).score
-    return {'col': col, 'row': row, 'score': score}
+    return {'col': col, 'row': row, 'score': score / 100} # divide by 100 to get a score between 0 and 1
 
 @dec.log_execution_time
 def _compute_bleu_score(mappings, df) -> float:
@@ -100,7 +100,7 @@ class DatasetAnalyser():
         matrix = self._get_embedding_matrix(data)
         return cosine_similarity(matrix)
     
-    def remove_duplicates_by_cossim(self, sim_matrix, threshold=0.99):
+    def remove_duplicates_by_sim_matrix(self, sim_matrix, threshold=0.99, **kwargs):
         """ Remove duplicates based on cosine similarity """
         # Compute the cosine similarity between the embeddings
         logging.info("Removing duplicates based on similarity")
@@ -109,6 +109,7 @@ class DatasetAnalyser():
         mask = rows != cols # ignore the diagonal
         rows = rows[mask]
         cols = cols[mask]
+        sent_sim_metric = kwargs.get('sent_sim_metric')
 
         # Filter flipped rows and cols
         row_, col_ = [], []
@@ -158,7 +159,7 @@ class DatasetAnalyser():
         # Remove the duplicate rows
         if self.args.debug_mode:
             tmp = df_tmp.with_row_index().filter(pl.col("index").is_in(col_)).drop('index')
-            tmp.write_json("output/rows_removed_after_cossim.json")
+            tmp.write_json(f"output/rows_removed_after_{sent_sim_metric}.json")
             logging.info(f"Removed {len(col_)} duplicate rows based on cosine similarity; threshold: {threshold}")
             merged = list(zip(row_, col_))
             logging.info(f"Merged (src <- tgt): {merged}")
@@ -171,8 +172,10 @@ class DatasetAnalyser():
                 # find longest domain str
                 logging.info(f"Ds: {df_tmp['source_dataset'][i[0]]:{max_src_ds}}; Domain: {df_tmp['domain'][i[0]]:{max_domain}}; Source ({df_tmp['id'][i[0]]}): {df_tmp['input'][i[0]]}")
                 logging.info(f"Ds: {df_tmp['source_dataset'][i[1]]:{max_src_ds}}; Domain: {df_tmp['domain'][i[1]]:{max_domain}}; Target ({df_tmp['id'][i[0]]}): {df_tmp['input'][i[1]]}")
+                logging.info(f"Similarity: {sim_matrix[i[0], i[1]]} {sent_sim_metric}")
                 logging.info("")
               
+        # return the dataframe without the duplicate rows
         df_tmp = df_tmp.with_row_index().filter(~pl.col("index").is_in(col_)).drop('index')
         return df_tmp
 
