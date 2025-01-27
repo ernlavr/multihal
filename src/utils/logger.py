@@ -4,6 +4,7 @@ import os
 import time
 import numpy as np
 from datetime import datetime
+import sys
 
 
 class KgLogger():
@@ -15,11 +16,14 @@ class KgLogger():
             self.setupLogging()
 
     def setupLogging(self):
+        for handler in logging.root.handlers[:]:
+            logging.root.removeHandler(handler)
         os.makedirs('logs', exist_ok=True)
         filename = f'logs/{self.timestamp}.log'
         logging.basicConfig(filename=filename, 
                             format='%(asctime)s %(message)s',
-                            level=logging.INFO)
+                            level=logging.INFO,
+                            )
         logging.info("Starting logging")
 
     def setupContinueLogging(self):

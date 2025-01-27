@@ -103,6 +103,7 @@ class GlobalConfig(metaclass=singl.Singleton):
 
             # clustering
             clustering_algo=None,
+            run_clustering=False,
 
             # Model
             sentence_embedder="sentence-transformers/sentence-t5-base", # HuggingFace or local path
