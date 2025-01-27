@@ -88,6 +88,7 @@ class GlobalConfig(metaclass=singl.Singleton):
             seed=42,    # seed for all random-based function calls
             log_level="INFO",
             device="cuda" if torch.cuda.is_available() else "cpu",
+            SLRUM_JOB_ID=os.getenv("SLURM_JOB_ID"),
 
             # Data
             data_dir="data",
