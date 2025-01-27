@@ -12,6 +12,7 @@ import torch
 from dotenv import load_dotenv
 import wandb
 import os
+import pprint
 
 def init_wandb(args):
     if args.wandb_online:
@@ -25,6 +26,7 @@ class GlobalConfig(metaclass=singl.Singleton):
     def __init__(self):
         self._args = self._initialize_args()
         logger.KgLogger(create_log=True)
+        logging.info(f"Global configuration: {pprint.pformat(vars(self._args))}")
 
 
     def _initialize_args(self):
