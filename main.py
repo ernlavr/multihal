@@ -6,6 +6,7 @@ import src.analysis.sentence_embedder as se
 import src.utils.wandb_manager as wbMang
 import logging
 import wandb
+import pprint
 
 def main():
     # Initialize the global configuration
@@ -42,7 +43,11 @@ def main():
 
     # Analysis figures
     if args.gen_anlyz_figs:
-        fig.Plots(data_manager.df).plot_ds_stats()
+        fig.plot_ds_stats(data_manager.df)
+        analyzer = anlyz.DatasetAnalyser(None, None)
+        logging.info(pprint.pformat(analyzer.get_list_of_domains_and_counts(data_manager.df)))        
+
+
     
 
 if __name__ == '__main__':
