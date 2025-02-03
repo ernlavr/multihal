@@ -6,6 +6,7 @@ import transformers
 from transformers import DataCollatorWithPadding
 import numpy as np
 import torch
+import torch.nn as nn
 
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.model_selection import train_test_split
@@ -20,8 +21,26 @@ import sklearn.ensemble
 import sklearn.naive_bayes
 import sklearn.neighbors
 
+# class CustomTrainer(transformers.Trainer):
+#     def __init__(self, class_weights=None, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         # create tensor out of class_weight values
+#         self.class_weights = torch.tensor([i for i in class_weights.values()], dtype=torch.float32).to(self.args.device)
+        
+
+    
+#     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
+#         labels = inputs.get("labels")
+#         # forward pass
+#         outputs = model(**inputs)
+#         logits = outputs.get("logits")
+#         # compute custom loss (suppose one has 3 labels with different weights)
+#         loss_fct = nn.CrossEntropyLoss(weight=self.class_weights)
+#         loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+#         return (loss, outputs) if return_outputs else loss
 
 def prepare_deep_learning(model_name: str, 
+                          weights,
                           train_corpus: np.ndarray, 
                           test_corpus: np.ndarray, 
                           train_labels: np.ndarray, 
@@ -32,7 +51,7 @@ def prepare_deep_learning(model_name: str,
         predictions = np.argmax(logits, axis=-1)
         accuracy = sklearn.metrics.accuracy_score(labels, predictions)
         precision, recall, f1, _ = sklearn.metrics.precision_recall_fscore_support(labels, predictions, average='weighted')
-        return { 'f1': f1, 'accuracy': accuracy, 'precision': precision, 'recall': recall }
+        return { 'eval_f1': f1, 'eval_accuracy': accuracy, 'eval_precision': precision, 'eval_recall': recall }
 
 
     # tokenize
@@ -51,10 +70,11 @@ def prepare_deep_learning(model_name: str,
 
     # train
     epochs = 4
-    batch_size = 8
+    batch_size = 4
     lr = 0.0001
     training_args = transformers.TrainingArguments(
                         eval_strategy = "steps",
+                        eval_steps=50,
                         learning_rate=lr,
                         per_device_train_batch_size=batch_size,
                         per_device_eval_batch_size=batch_size,
@@ -65,12 +85,14 @@ def prepare_deep_learning(model_name: str,
                     )
 
     trainer = transformers.Trainer(
+        # class_weights=weights,
         model=model,
         args=training_args,
         train_dataset=tokenized_train,
         eval_dataset=tokenized_test,
         tokenizer=tokenizer,
         data_collator=DataCollatorWithPadding(tokenizer=tokenizer),
+        compute_metrics=compute_metrics
     )
     return trainer
 
@@ -107,7 +129,7 @@ def get_classification_model(name: str, cw=None):
     elif name == "rf":
         return sklearn.ensemble.RandomForestClassifier(class_weight=cw)
     elif name == "bert":
-        return lambda x, y, q, z: prepare_deep_learning('google-bert/bert-base-uncased', x, y, q, z)
+        return lambda x, y, q, z: prepare_deep_learning('google-bert/bert-base-uncased', cw, x, y, q, z)
 
 
 
@@ -182,10 +204,10 @@ def train():
         
         train_corpus, test_corpus, train_labels, test_labels = train_test_split(vectorized_corpus, labels, test_size=config.val_split, random_state=42)
 
-        # class_weights = compute_class_weight('balanced', classes=[0, 1], y=train_labels)
-        # class_weights = {0: class_weights[0], 1: class_weights[1]}
+        class_weights = compute_class_weight('balanced', classes=[0, 1], y=train_labels)
+        class_weights = {0: class_weights[0], 1: class_weights[1]}
 
-        model = get_classification_model(config.model) # , cw=class_weights)
+        model = get_classification_model(config.model, cw=class_weights)
 
         if config.model == 'bert':
             trainer = model(train_corpus, test_corpus, train_labels, test_labels)
