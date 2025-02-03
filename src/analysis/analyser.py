@@ -98,12 +98,12 @@ class DatasetAnalyser():
 
     def get_cossim(self, data):
         matrix = self._get_embedding_matrix(data)
+        cos_sim = cosine_similarity(matrix)
 
         # save the cosine similarity matrix
         with open('output/cosine_similarity.pkl', 'wb') as f:
-            pickle.dump(matrix, f)
-            
-        return cosine_similarity(matrix)
+            pickle.dump(cos_sim, f)
+        return cos_sim
     
     def remove_duplicates_by_sim_matrix(self, sim_matrix, threshold=0.99, **kwargs):
         """ Remove duplicates based on cosine similarity """

@@ -182,10 +182,10 @@ def train():
         
         train_corpus, test_corpus, train_labels, test_labels = train_test_split(vectorized_corpus, labels, test_size=config.val_split, random_state=42)
 
-        class_weights = compute_class_weight('balanced', classes=[0, 1], y=train_labels)
-        class_weights = {0: class_weights[0], 1: class_weights[1]}
+        # class_weights = compute_class_weight('balanced', classes=[0, 1], y=train_labels)
+        # class_weights = {0: class_weights[0], 1: class_weights[1]}
 
-        model = get_classification_model(config.model, cw=class_weights)
+        model = get_classification_model(config.model) # , cw=class_weights)
 
         if config.model == 'bert':
             trainer = model(train_corpus, test_corpus, train_labels, test_labels)
