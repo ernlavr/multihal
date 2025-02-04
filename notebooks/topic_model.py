@@ -210,7 +210,7 @@ sweep_config = {
 }
 
 # Create a sweep
-sweep_id = wandb.sweep(sweep_config, project="transformer-sweep")
+sweep_id = wandb.sweep(sweep_config, project="topic_modeling")
 # Run the sweep
 wandb.agent(sweep_id, train, count=10)  # Runs 10 experiments
 
