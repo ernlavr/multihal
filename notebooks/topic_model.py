@@ -119,8 +119,12 @@ class ModelTrainer:
         predictions = np.argmax(logits, axis=1)
 
         # add predictions and labels to the dataframe
-        df['_predictions'] = [self.int_to_label[pred] for pred in predictions]
-        df['_labels'] = labels
+        df['pred_domain'] = [self.int_to_label[pred] for pred in predictions]
+        df['orig_domain'] = labels
+
+        # remove columns "context_type"
+        df = df.drop(columns=['context_type', 'domain_encoded', 'context_length', 'source_dataset', 'task'])
+
 
         # log df to wandb
         wandb.log({"Test Data Predictions": wandb.Table(dataframe=df)})
@@ -128,9 +132,9 @@ class ModelTrainer:
 
     def train_model(self, X_train, X_test, y_train, y_test, class_weights):
         model = transformers.AutoModelForSequenceClassification.from_pretrained(self.model_name, num_labels=len(self.label_to_int))
+        
         training_args = TrainingArguments(
-            eval_strategy="steps", 
-            eval_steps=100,
+            eval_strategy="epoch", 
             learning_rate=wandb.config.lr, 
             per_device_train_batch_size=32,
             per_device_eval_batch_size=32, 
@@ -148,6 +152,8 @@ class ModelTrainer:
             data_collator=transformers.DataCollatorWithPadding(tokenizer=self.tokenizer),
             compute_metrics=self.compute_metrics
         )
+
+        print(f"Modeling training on: {model.device}")
         trainer.train()
         self.model = model
 
@@ -204,10 +210,10 @@ sweep_config = {
     "metric": {"name": "eval/f1", "goal": "maximize"},
     "parameters": {
         "model_name": {
-            "values": ["bert-base-uncased", "bert-large-uncased", "FacebookAI/roberta-large"]
+            "values": ["FacebookAI/roberta-large", "bert-base-uncased", "bert-large-uncased", "microsoft/deberta-v3-large"]
         },
         "lr": {
-            "values": [1e-6, 5e-6, 1e-5, 5e-5, 1e-4]
+            "values": [1e-4, 1e-5, 5e-5, 5e-6, 1e-6]
         },
     }
 }
