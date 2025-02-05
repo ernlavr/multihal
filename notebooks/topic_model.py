@@ -131,13 +131,12 @@ class ModelTrainer:
         training_args = TrainingArguments(
             eval_strategy="steps", 
             eval_steps=100,
-            learning_rate=1e-5, 
+            learning_rate=wandb.config.lr, 
             per_device_train_batch_size=32,
             per_device_eval_batch_size=32, 
             num_train_epochs=5, 
             weight_decay=0.01, 
             metric_for_best_model="f1",
-            load_best_model_at_end=True,
             
             output_dir="./models", 
             report_to="wandb"
@@ -179,7 +178,7 @@ def train():
     config = wandb.config  # Access sweep hyperparameters
 
     # Load and preprocess dataset
-    data_processor = DataProcessor("/Users/dr84sy/Documents/PhD/projects/multihal/multihal/output/data/multihal_unprocessed.csv")
+    data_processor = DataProcessor("/home/cs.aau.dk/dr84sy/github/multihal/output/data/multihal_unprocessed.csv")
     cleaned_data = data_processor.clean_data()
 
     domains = ['qsranking', 'healthcare', 'science and technology', 'entertainment', 'ragtruth', 'politics',
@@ -206,7 +205,10 @@ sweep_config = {
     "parameters": {
         "model_name": {
             "values": ["bert-base-uncased", "bert-large-uncased", "FacebookAI/roberta-large"]
-        }
+        },
+        "lr": {
+            "values": [1e-6, 5e-6, 1e-5, 5e-5, 1e-4]
+        },
     }
 }
 

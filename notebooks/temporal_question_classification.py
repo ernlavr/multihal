@@ -7,6 +7,9 @@ from transformers import DataCollatorWithPadding
 import numpy as np
 import torch
 import torch.nn as nn
+import wandb
+import os
+import random
 
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.model_selection import train_test_split
@@ -39,6 +42,21 @@ import sklearn.neighbors
 #         loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
 #         return (loss, outputs) if return_outputs else loss
 
+
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Torch device: {DEVICE}")
+
+def enforce_reproducibility(seed: int):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    random.seed(seed)
+    np.random.seed(seed)
+
+enforce_reproducibility(42)
+
 def prepare_deep_learning(model_name: str, 
                           weights,
                           train_corpus: np.ndarray, 
@@ -51,7 +69,7 @@ def prepare_deep_learning(model_name: str,
         predictions = np.argmax(logits, axis=-1)
         accuracy = sklearn.metrics.accuracy_score(labels, predictions)
         precision, recall, f1, _ = sklearn.metrics.precision_recall_fscore_support(labels, predictions, average='weighted')
-        return { 'eval_f1': f1, 'eval_accuracy': accuracy, 'eval_precision': precision, 'eval_recall': recall }
+        return { 'eval/f1': f1, 'eval/accuracy': accuracy, 'eval/precision': precision, 'eval/recall': recall }
 
 
     # tokenize
@@ -66,21 +84,22 @@ def prepare_deep_learning(model_name: str,
     tokenized_test = test_ds.map(preprocess_function, batched=True)
 
     # encode
-    model = transformers.AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
+    model = transformers.AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2).to(DEVICE)
 
     # train
     epochs = 4
-    batch_size = 4
+    batch_size = 8
     lr = 0.0001
     training_args = transformers.TrainingArguments(
                         eval_strategy = "steps",
-                        eval_steps=50,
+                        eval_steps=100,
                         learning_rate=lr,
                         per_device_train_batch_size=batch_size,
                         per_device_eval_batch_size=batch_size,
                         num_train_epochs=epochs,
                         weight_decay=0.01,
                         metric_for_best_model="f1",
+                        save_strategy="no",
                         output_dir="./models",
                     )
 
@@ -94,6 +113,9 @@ def prepare_deep_learning(model_name: str,
         data_collator=DataCollatorWithPadding(tokenizer=tokenizer),
         compute_metrics=compute_metrics
     )
+    # model training on device:
+    print(f"Training model {model_name} on {model.device}")
+
     return trainer
 
 
@@ -130,6 +152,8 @@ def get_classification_model(name: str, cw=None):
         return sklearn.ensemble.RandomForestClassifier(class_weight=cw)
     elif name == "bert":
         return lambda x, y, q, z: prepare_deep_learning('google-bert/bert-base-uncased', cw, x, y, q, z)
+    elif name == "roberta":
+        return lambda x, y, q, z: prepare_deep_learning('FacebookAI/xlm-roberta-large', cw, x, y, q, z)
 
 
 
@@ -155,30 +179,28 @@ def tokenize(text):
 
 
 # setup a weights and bias sweep
-import wandb
-import os
 os.environ['WANDB_API_KEY'] = '49c8e7dca82f91f9d65021c3dd71101b686c1f53'
 
 
 sweep_config = {
     'method': 'grid',
     'metric': {
-        'name': 'f1',
+        'name': 'eval/f1',
         'goal': 'maximize'
     },
     'parameters': {
+        'model': {
+            'values': ['svm', 'roberta', 'bert', 'logistic', 'nb', 'rf']
+        },
         'vectorizer': {
-            'values': ['count'] #, 'tfidf', 'minilm']
+            'values': ['count', 'tfidf', 'minilm']
         },
         'question_w_cntx': {
-            'values': [True] #, False]
+            'values': [True, False]
         },
         'val_split': {
-            'values': [0.05, 0.1] # , 0.2, 0.3
-        },
-        'model': {
-            'values': ['bert', 'svm'] # 'logistic', 'nb', 'rf', 
-        },
+            'values': [0.05, 0.1, 0.2, 0.3]
+        }
     }
 }
 
@@ -193,23 +215,23 @@ def train():
         dataframe = data['train'].to_pandas()
         labels = dataframe['label'].values
         if config.question_w_cntx:
-            corpus =  (dataframe['context'] + ' ' + dataframe['question']).values
+            corpus =  (dataframe['question'] + ' ' + dataframe['context']).values
         else:
             corpus =  (dataframe['question']).values
 
         # set corpus, for deep learning we need to keep the original corpus
-        vectorized_corpus = feature_vectorizer(corpus)
-        if config.model == 'bert':
-            vectorized_corpus = corpus
-        
-        train_corpus, test_corpus, train_labels, test_labels = train_test_split(vectorized_corpus, labels, test_size=config.val_split, random_state=42)
+        if 'bert' not in config.model:
+            print("Corpus vectorized!")
+            corpus = feature_vectorizer(corpus)
+            
+        train_corpus, test_corpus, train_labels, test_labels = train_test_split(corpus, labels, test_size=config.val_split, random_state=42)
 
-        class_weights = compute_class_weight('balanced', classes=[0, 1], y=train_labels)
+        class_weights = compute_class_weight('balanced', classes=np.array([0, 1]), y=train_labels)
         class_weights = {0: class_weights[0], 1: class_weights[1]}
 
         model = get_classification_model(config.model, cw=class_weights)
 
-        if config.model == 'bert':
+        if 'bert' in config.model:
             trainer = model(train_corpus, test_corpus, train_labels, test_labels)
             trainer.train()
         
@@ -218,9 +240,11 @@ def train():
             predictions = model.predict(test_corpus)
 
             print(classification_report(test_labels, predictions, target_names=[decode_label(0), decode_label(1)]))
+            precision, recall, f1, _ = sklearn.metrics.precision_recall_fscore_support(test_labels, predictions, average='weighted')
 
-            run.log({'accuracy': sklearn.metrics.accuracy_score(test_labels, predictions)})
-            run.log({'f1': sklearn.metrics.f1_score(test_labels, predictions)})
-            run.log({'precision': sklearn.metrics.precision_score(test_labels, predictions)})
+            run.log({'eval/accuracy': sklearn.metrics.accuracy_score(test_labels, predictions)})
+            run.log({'eval/precision': precision})
+            run.log({'eval/recall': recall})
+            run.log({'eval/f1': f1})
 
 wandb.agent(sweep_id, train)
