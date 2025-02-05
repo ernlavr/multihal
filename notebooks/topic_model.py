@@ -10,6 +10,7 @@ from transformers import Trainer, TrainingArguments
 from datasets import Dataset
 from datetime import datetime
 import wandb
+from tqdm import tqdm
 
 
 class DataProcessor:
@@ -77,7 +78,7 @@ class ModelTrainer:
 
     def preprocess_data(self, texts, labels):
         dataset = Dataset.from_dict({'text': texts, 'label': labels})
-        return dataset.map(lambda x: self.tokenizer(x["text"], truncation=True, padding=True, max_length=512, return_tensors='pt'), batched=True)
+        return dataset.map(lambda x: self.tokenizer(x["text"], truncation=True, padding='max_length', max_length=512, return_tensors='pt'), batched=True)
     
     def inference(self, df):
         from torch.utils.data import DataLoader
@@ -99,7 +100,7 @@ class ModelTrainer:
         # Iterating over the DataLoader for batched inference
         self.model.eval()  # Set model to evaluation mode
         with torch.no_grad():  # Disable gradients during inference
-            for batch in dataloader:
+            for batch in tqdm(dataloader, "Running test inference"):
                 input_ids, attention_mask = batch
 
                 # put input ids to same device as model
@@ -131,8 +132,8 @@ class ModelTrainer:
             eval_strategy="steps", 
             eval_steps=100,
             learning_rate=1e-5, 
-            per_device_train_batch_size=8,
-            per_device_eval_batch_size=8, 
+            per_device_train_batch_size=32,
+            per_device_eval_batch_size=32, 
             num_train_epochs=5, 
             weight_decay=0.01, 
             metric_for_best_model="f1",
