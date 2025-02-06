@@ -11,7 +11,15 @@ from datasets import Dataset
 from datetime import datetime
 import wandb
 from tqdm import tqdm
+import random
 
+def enforce_reproducibility(seed: int):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    random.seed(seed)
+    np.random.seed(seed)
 
 class DataProcessor:
     def __init__(self, file_path):
@@ -136,8 +144,8 @@ class ModelTrainer:
         training_args = TrainingArguments(
             eval_strategy="epoch", 
             learning_rate=wandb.config.lr, 
-            per_device_train_batch_size=32,
-            per_device_eval_batch_size=32, 
+            per_device_train_batch_size=8,
+            per_device_eval_batch_size=8, 
             num_train_epochs=5, 
             weight_decay=0.01, 
             metric_for_best_model="f1",
@@ -183,6 +191,8 @@ def train():
     wandb.init()  # Initialize a W&B run
     config = wandb.config  # Access sweep hyperparameters
 
+    enforce_reproducibility(config.seed)
+
     # Load and preprocess dataset
     data_processor = DataProcessor("/home/cs.aau.dk/dr84sy/github/multihal/output/data/multihal_unprocessed.csv")
     cleaned_data = data_processor.clean_data()
@@ -210,11 +220,14 @@ sweep_config = {
     "metric": {"name": "eval/f1", "goal": "maximize"},
     "parameters": {
         "model_name": {
-            "values": ["FacebookAI/roberta-large", "bert-base-uncased", "bert-large-uncased", "microsoft/deberta-v3-large"]
+            "values": ["microsoft/deberta-v3-large", "FacebookAI/roberta-large", "bert-base-uncased", "bert-large-uncased"]
         },
         "lr": {
             "values": [1e-4, 1e-5, 5e-5, 5e-6, 1e-6]
         },
+        "seed": {
+            "values": [42, 69, 420]
+        }
     }
 }
 
