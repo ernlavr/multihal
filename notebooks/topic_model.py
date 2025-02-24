@@ -86,7 +86,7 @@ class ModelTrainer:
 
     def preprocess_data(self, texts, labels):
         dataset = Dataset.from_dict({'text': texts, 'label': labels})
-        return dataset.map(lambda x: self.tokenizer(x["text"], truncation=True, padding='max_length', max_length=512, return_tensors='pt'), batched=True)
+        return dataset.map(lambda x: self.tokenizer(x["text"], truncation=True, max_length=512), batched=True)
     
     def inference(self, df):
         from torch.utils.data import DataLoader
@@ -101,7 +101,7 @@ class ModelTrainer:
             torch.tensor(preprocessed_data['input_ids']), 
             torch.tensor(preprocessed_data['attention_mask'])
         )
-        dataloader = DataLoader(dataset, batch_size=8)
+        dataloader = DataLoader(dataset, batch_size=8, collate_fn=transformers.DataCollatorWithPadding(tokenizer=self.tokenizer))
 
         logits = []
 

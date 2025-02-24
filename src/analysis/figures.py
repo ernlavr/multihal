@@ -86,3 +86,24 @@ def plot_histogram(data: pl.DataFrame, bin_count=10):
     plt.title('Histogram of Context Length')
     plt.savefig('output/figures/basic_stats/histogram.png')
     plt.close()
+
+def plot_pie(data: dict, figname):
+    """ Data: dict of {subfigure: (data_occurences, labels)}
+        Figname: name of the figure
+    """
+    os.makedirs("output/figures/entity_parsing", exist_ok=True)
+    fig_count = len(data.keys())
+    # Dynamically determine the number of rows and columns
+    cols = int(np.ceil(np.sqrt(fig_count)))  # Closest square layout
+    rows = int(np.ceil(fig_count / cols))    # Adjust rows accordingly
+    fig, axs = plt.subplots(rows, cols, figsize=(5*cols, 5*rows), squeeze=True)
+    axs = axs.ravel()
+
+    for idx, key in enumerate(data.keys()):
+        _data = data[key]
+        axs[idx].pie(data[key][1], labels=data[key][0], autopct='%1.1f%%', startangle=140)
+        axs[idx].axis('equal')
+        axs[idx].set_title(f"{key}; n={sum(data[key][1])}")
+    
+    fig.suptitle(figname, fontsize=20)
+    fig.savefig(f'output/figures/entity_parsing/{figname}_pie.png')

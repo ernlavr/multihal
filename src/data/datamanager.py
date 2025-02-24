@@ -17,12 +17,40 @@ class DataManager(metaclass=sing.Singleton):
         self.df = self.column_mapper.get_blank_df()
         self.df_pp = self.column_mapper.get_blank_df()
         self.args = args
-        self.ds = dl.load_data(args)
-        self.merge_data()
+        
 
-        logging.info(f"Parsed dataset of size: {self.df.shape[0]}")
-        self.serialize_ds()
+        if args.load_premade_dataset is None:
+            self.ds = dl.load_data(args)
+            self.merge_data()
+            logging.info(f"Parsed dataset of size: {self.df.shape[0]}")
+            self.serialize_ds()
+        else:
+            self.df = self.get_premade_dataset(args)
 
+    def get_premade_dataset(self, args):
+        # get extension
+        ext = args.load_premade_dataset.split('.')[-1]
+        if ext == 'csv':
+            return pl.read_csv(args.load_premade_dataset)
+        elif ext == 'parquet':
+            return pl.read_parquet(args.load_premade_dataset)
+        elif ext == 'json':
+            return pl.read_json(args.load_premade_dataset)
+
+    def get_dataset(self, args=None) -> pl.DataFrame:
+        """
+        Retrieve a filtered dataset based on the provided arguments.
+
+        Args:
+            args (optional): An object containing the dataset filter criteria. 
+                     It should have an attribute `datasets` which is a list of dataset names to filter.
+
+        Returns:
+            pl.DataFrame: A filtered DataFrame if `args` is provided, otherwise the entire DataFrame.
+        """
+        if args is not None:
+            return self.df.filter(pl.col("source_dataset").is_in(args.datasets))
+        return self.df
 
     def serialize_ds(self):
         """ Serializes the datasets into the main dataframe """

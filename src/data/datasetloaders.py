@@ -10,6 +10,7 @@ import json
 import copy
 import numpy as np
 import time
+import polars as pl
 
 def load_data(args):
     """ Returns all possible datasets unless there are explicit datasets specified

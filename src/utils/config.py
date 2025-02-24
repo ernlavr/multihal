@@ -98,14 +98,18 @@ class GlobalConfig(metaclass=singl.Singleton):
             # Control
             debug_mode=True,                # Debug mode
             n_pds=5,                        # Number of datapoints to sample for debugging
-            gen_anlyz_figs=False,
+            gen_anlyz_figs=False,           
             gen_sent_embeds=False,
             wandb_online=False,
-            sent_sim_metric=None,
+            sent_sim_metric=None,           # string, either 'bleu' or 'cosine'
             remove_duplicates=False,
+            parse_text_to_ents=False,
+            run_qa_kgs=False,
+            
+            load_premade_dataset=None,      # string, path to a premade dataset
 
             # clustering
-            clustering_algo=None,
+            clustering_algo=None,           # string, either 'kmeans' or 'dbscan'
             run_clustering=False,
 
             # Model

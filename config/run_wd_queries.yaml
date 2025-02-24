@@ -8,28 +8,28 @@ device: cuda      # 'cuda' if torch.cuda.is_available() else 'cpu'
 data_dir: output/data
 datasets: 
   - 'tqa_gen'
-  - 'halueval'
-  - 'halubench'
+  # - 'halueval'
+  # - 'halubench'
   - 'felm'
-  - 'defan'
-  - 'simpleqa'
-  - 'shroom2024'
+  # - 'defan'
+  # - 'simpleqa'
+  # - 'shroom2024'
   - 'shroom2025'
   
 # Control Settings
 debug_mode: true             # Debug mode
 n_pds: 5                     # Number of datapoints to sample for debugging
-gen_anlyz_figs: true
-gen_sent_embeds: true
+gen_anlyz_figs: false
+gen_sent_embeds: false
 save_full_data: true
-save_basic_stats: true
-remove_duplicates: true  
+save_basic_stats: false
+remove_duplicates: false
+parse_text_to_ents: false
+run_qa_kgs: true
+
 sent_sim_metric: 'cosine'
 
-# kwargs
-
-# clustering
-clustering_algo: dbscan # dbscan
+load_premade_dataset: output/data/data_subj_obj_parsed.json
 
 # Model Settings
 sentence_embedder: sentence-transformers/all-MiniLM-L6-v2  # HuggingFace or local path

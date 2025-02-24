@@ -10,7 +10,7 @@ import sys
 class KgLogger():
     def __init__(self, create_log=False, continue_from=None):
         self.timestamp = time.strftime("%Y%m%d-%H%M%S")
-        
+        self.continue_from = continue_from
         self.num_queries = 0
         if create_log:
             self.setupLogging()
@@ -37,17 +37,17 @@ class KgLogger():
         logging.info(f"<--- Continuing from previous log file {filename} --->")
         logging.info("Starting logging")
 
-    def getResultDataframe(self, hops):
-        tmp_cols = ['q_ID', 'utterance', 'answer', 'entity']
-        tmp_cols.extend([f'hop_{i}' for i in range(1, hops+1)])
+    def getResultDataframe(self, dataframe, hops):
+        tmp_cols = dataframe.columns
+        tmp_cols.extend([f'kg_triples', 'sparql_query', 'source_kg'])
         self.df = pd.DataFrame(columns=tmp_cols)
         return self.df
     
     def concatResults(self, df, datapoint, matches):
-        qid = datapoint['questionid']
-        utterance = datapoint['utterance']
-        answer = ' <SEP> '.join(datapoint['answers_str']) if datapoint['answers_str'] else datapoint['answers']
-        entity = ' <SEP> '.join(datapoint['answers']) if datapoint['answers'] else datapoint['answers']
+        qid = datapoint['id']
+        utterance = datapoint['input']
+        answer = datapoint['output']
+        # entity = ' <SEP> '.join(datapoint['output']) if datapoint['input'] else datapoint['input']
         
         # hops
         hops = []
@@ -66,7 +66,7 @@ class KgLogger():
             if len(h) > 1: h = " | ".join(h)
             hops.append(h)
         
-        tmp = [qid, utterance, answer, entity]
+        tmp = [qid, utterance, answer, "entity"]
         tmp.extend(hops)
         
         n_cols = len(df.columns)
@@ -91,14 +91,14 @@ class KgLogger():
             logging.info(f"No results for Hop {hop}")
     
     def saveResults(self, df):
-        os.makedirs('results', exist_ok=True)
+        os.makedirs('output/data', exist_ok=True)
 
         if self.continue_from:
-            df.to_csv(f'results/{self.continue_from}.csv', index=False)
+            df.to_csv(f'output/data/multihal_kgs_{self.continue_from}.csv', index=False)
         else:
-            df.to_csv(f'results/{self.timestamp}.csv', index=False)
+            df.to_csv(f'output/data/multihal_kgs{self.timestamp}.csv', index=False)
 
-    def logTimeDetails(self):
+    def logTimeDetails(self, start_time=None):
         if self.num_queries == 0:
             self.query_time = time.time()
         
@@ -106,7 +106,7 @@ class KgLogger():
         self.num_queries += 1
 
         # average time per query, time so far
-        time_so_far = time.time() - self.start_time
+        time_so_far = time.time() - start_time
         avg_time = time_so_far / self.num_queries
 
         logging.info(f"Elapsed: {time_so_far:.2f}s; Avg/Question: {avg_time:.2f}s; Questions: {self.num_queries}")

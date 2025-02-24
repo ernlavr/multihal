@@ -105,7 +105,7 @@ class DatasetAnalyser():
             pickle.dump(cos_sim, f)
         return cos_sim
     
-    def remove_duplicates_by_sim_matrix(self, sim_matrix, threshold=0.99, **kwargs):
+    def remove_duplicates_by_sim_matrix(self, sim_matrix, threshold=0.99, **kwargs) -> pl.DataFrame:
         """ Remove duplicates based on cosine similarity """
         # Compute the cosine similarity between the embeddings
         logging.info("Removing duplicates based on similarity")
@@ -182,6 +182,8 @@ class DatasetAnalyser():
               
         # return the dataframe without the duplicate rows
         df_tmp = df_tmp.with_row_index().filter(~pl.col("index").is_in(col_)).drop('index')
+        # drop embeddings column
+        df_tmp = df_tmp.drop('embeddings')
         return df_tmp
 
     def generate_clustering_evals(self, data):
@@ -359,3 +361,10 @@ class DatasetAnalyser():
         os.makedirs('output/figures/analysis/', exist_ok=True)
         fig.savefig(f'output/figures/analysis/silhouette_plot_n{num_clusters}.png')
         wbMang.WandbManager().log_figure(f'Silhouette Plot; n: {num_clusters}', fig)
+
+    def get_list_of_domains_and_counts(self, data: pl.DataFrame):
+        """ Returns a list of tuples where each tuple contains a domain and the number of occurrences in the dataset """
+        vals = data['domain'].value_counts().sort(by='count', descending=True)
+        domain, counts = vals['domain'].to_list(), vals['count'].to_list()
+        output = list(zip(domain, counts))
+        return output
