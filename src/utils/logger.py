@@ -16,14 +16,29 @@ class KgLogger():
             self.setupLogging()
 
     def setupLogging(self):
+        print("setup logging")
+        # Remove any existing handlers
         for handler in logging.root.handlers[:]:
             logging.root.removeHandler(handler)
+        
+        # Ensure the logs directory exists
         os.makedirs('logs', exist_ok=True)
         filename = f'logs/{self.timestamp}.log'
-        logging.basicConfig(filename=filename, 
-                            format='%(asctime)s %(message)s',
-                            level=logging.INFO,
-                            )
+        
+        # Create a file handler for logging to a file
+        file_handler = logging.FileHandler(filename)
+        file_handler.setLevel(logging.INFO)
+        file_formatter = logging.Formatter('%(asctime)s %(message)s')
+        file_handler.setFormatter(file_formatter)
+        
+        # Create a stream handler for logging to stdout
+        stream_handler = logging.StreamHandler(sys.stdout)
+        stream_handler.setLevel(logging.INFO)
+        stream_formatter = logging.Formatter('%(asctime)s %(message)s')
+        stream_handler.setFormatter(stream_formatter)
+        
+        # Configure logging with both handlers
+        logging.basicConfig(handlers=[file_handler, stream_handler], level=logging.INFO)
         logging.info("Starting logging")
 
     def setupContinueLogging(self):
@@ -32,7 +47,9 @@ class KgLogger():
         self.timestamp = parsed_time.strftime("%Y%m%d-%H%M%S")
         logging.basicConfig(filename=filename, 
                             format='%(asctime)s %(message)s',
-                            level=logging.INFO)
+                            level=logging.INFO
+                            
+                            )
         logging.info("<---                                              --->")
         logging.info(f"<--- Continuing from previous log file {filename} --->")
         logging.info("Starting logging")

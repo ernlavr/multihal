@@ -1,5 +1,7 @@
 import json
 from itertools import chain
+import torch
+import logging
 
 def remove_starting_pronouns(text: str):
     pronouns = ['the']
@@ -29,3 +31,10 @@ def fill_all_properties(path):
     
 def flatten_if_2d(lst):
     return list(chain.from_iterable(lst)) if any(isinstance(i, list) for i in lst) else lst
+
+def print_cuda_stats():
+    logging.info(f"Cuda available: {torch.cuda.is_available()}; \
+                Device Count: {torch.cuda.device_count()}; \
+                Current Device {torch.cuda.current_device()}; \
+                Device Name {torch.cuda.get_device_name(0)}")
+    
