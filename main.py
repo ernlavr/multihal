@@ -72,7 +72,7 @@ def main():
         
     if args.evaluate:
         # judge = llmJudge.LLMJudge('meta-llama/Llama-3.3-70B-Instruct', args)
-        judge = llmJudge.LLMJudge('meta-llama/Llama-3.2-3B-Instruct', args)
+        judge = llmJudge.LLMJudge(args.llm_judge_model, args)
         judge.evaluate_triple_relevance(data_manager.df)
         
     

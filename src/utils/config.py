@@ -105,15 +105,18 @@ class GlobalConfig(metaclass=singl.Singleton):
             remove_duplicates=False,
             parse_text_to_ents=False,
             run_qa_kgs=False,
+            evaluate=False,                  # Evaluate the dataset triples
             
             load_premade_dataset=None,      # string, path to a premade dataset
 
             # clustering
             clustering_algo=None,           # string, either 'kmeans' or 'dbscan'
             run_clustering=False,
+            
 
             # Model
             sentence_embedder="sentence-transformers/sentence-t5-base", # HuggingFace or local path
+            llm_judge_model=None,                                       # model definition for LLM-as-judge
             )
 
     def load_yaml(self, config_args: dict) -> dict:

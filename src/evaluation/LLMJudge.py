@@ -3,14 +3,17 @@ import torch
 import logging
 import src.utils.helpers as utils
 import os
+import polars as pl
 
 class LLMJudge():
     def __init__(self, hf_model, args):
         utils.print_cuda_stats()
         self.args = args
-        self.tokenizer = transformers.AutoTokenizer.from_pretrained(hf_model)
-        self.model, self.device = self.get_distributed_model(hf_model)
-        self.run_inference("Best ways of handling business is by")
+        
+        if hf_model is not None:
+            self.tokenizer = transformers.AutoTokenizer.from_pretrained(hf_model)
+            self.model, self.device = self.get_distributed_model(hf_model)
+            self.run_inference("Best ways of handling business is by")
     
     def get_distributed_model(self, model_name):
         # Initialize distributed
