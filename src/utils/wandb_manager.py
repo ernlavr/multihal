@@ -6,6 +6,7 @@ import polars as pl
 class WandbManager(metaclass=singl.Singleton):
     def __init__(self, args):
         self._args = args
+        self.init_wandb()
 
     def get_args(self):
         return self._args
@@ -13,7 +14,8 @@ class WandbManager(metaclass=singl.Singleton):
     def init_wandb(self):
         if self._args.wandb_online:
             os.environ["WANDB_MODE"] = "online"
-            wandb.init(project="multihal", config=self._args.__dict__)
+        
+        wandb.init(project="multihal", config=self._args.__dict__)
 
     def log_dataframe(self, data: pl.DataFrame):
         # Remove embeddings column for clarity

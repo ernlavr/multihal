@@ -4,6 +4,7 @@ import src.utils.logger as logger
 import torch
 import random
 import numpy as np
+import time
 from types import SimpleNamespace
 import argparse
 import logging
@@ -20,23 +21,47 @@ def init_wandb(args):
         wandb.init(project="multihal", config=args.__dict__)
 
 # Constants
-LIST_SEP = ' <SEP> '
+LIST_SEP = '<SEP>'
 
 class GlobalConfig(metaclass=singl.Singleton):
     def __init__(self):
         self._args = self._initialize_args()
-        logger.KgLogger(create_log=True)
+        logger.KgLogger(self._args, create_log=True)
         logging.info(f"Global configuration: {pprint.pformat(vars(self._args))}")
 
 
     def _initialize_args(self):
+        # load env
         load_dotenv('.env')
         config_args = self.get_config_args()
         override_args = self.load_yaml(config_args)
         override_args.wandb_online = config_args.wandb_online
         
+        # get default args and override them with config
         default_args = self.get_default_args()
-        return self.override_args(default_args, override_args)
+        override_args = self.override_args(default_args, override_args)
+        
+        if (prev_state := override_args.continue_from_previous_state) is not None:
+            full_run_dir = os.path.join(override_args.output_dir, prev_state['RUN_DIR'])
+            if os.path.exists(full_run_dir):
+                override_args.RUN_DIR = prev_state['RUN_DIR']
+            else:
+                raise ValueError("Previous state does not exist")
+        
+        # update data directory to contain Run ID
+        override_args.data_dir = os.path.join(override_args.output_dir, override_args.RUN_DIR, "data")
+        override_args.conf_dir = os.path.join(override_args.output_dir, override_args.RUN_DIR, "conf")
+        override_args.fig_dir = os.path.join(override_args.output_dir, override_args.RUN_DIR, "figs")
+        
+        # create directories
+        os.makedirs(override_args.data_dir, exist_ok=True)
+        os.makedirs(override_args.conf_dir, exist_ok=True)
+        os.makedirs(override_args.fig_dir, exist_ok=True)
+        
+        # save override args to file
+        omegaconf.OmegaConf.save(config=override_args.__dict__, f=f"{override_args.conf_dir}/args.yaml")
+             
+        return override_args
     
     def addToGlobalConfig(self, key, value):
         self._args.__dict__[key] = value
@@ -47,6 +72,9 @@ class GlobalConfig(metaclass=singl.Singleton):
     
     def set_random_seeds(self, seed=42):
         torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
         random.seed(seed)
         np.random.seed(seed)
         return seed
@@ -89,6 +117,7 @@ class GlobalConfig(metaclass=singl.Singleton):
             log_level="INFO",
             device="cuda" if torch.cuda.is_available() else "cpu",
             SLRUM_JOB_ID=os.getenv("SLURM_JOB_ID"),
+            RUN_DIR=time.strftime("%Y%m%d-%H%M%S"),
 
             # Data
             data_dir="data",
@@ -108,6 +137,7 @@ class GlobalConfig(metaclass=singl.Singleton):
             evaluate=False,                  # Evaluate the dataset triples
             
             load_premade_dataset=None,      # string, path to a premade dataset
+            continue_from_previous_state=None, # dict {RUN_ID: str, dataset: str, functions: list}
 
             # clustering
             clustering_algo=None,           # string, either 'kmeans' or 'dbscan'

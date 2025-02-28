@@ -86,17 +86,21 @@ def plot_histogram(data: pl.DataFrame, bin_count=10):
     plt.savefig('output/figures/basic_stats/histogram.png')
     plt.close()
 
-def plot_pie(data: dict, figname):
+def plot_pie(data: dict, figname, output_dir):
     """ Data: dict of {subfigure: (data_occurences, labels)}
         Figname: name of the figure
     """
-    os.makedirs("output/figures/entity_parsing", exist_ok=True)
+    folder = f"{output_dir}"
+    os.makedirs(folder, exist_ok=True)
     fig_count = len(data.keys())
     # Dynamically determine the number of rows and columns
     cols = int(np.ceil(np.sqrt(fig_count)))  # Closest square layout
     rows = int(np.ceil(fig_count / cols))    # Adjust rows accordingly
     fig, axs = plt.subplots(rows, cols, figsize=(5*cols, 5*rows), squeeze=True)
-    axs = axs.ravel()
+    if fig_count > 1:
+        axs = axs.ravel()
+    else:
+        axs = [axs]
 
     for idx, key in enumerate(data.keys()):
         _data = data[key]
@@ -105,4 +109,5 @@ def plot_pie(data: dict, figname):
         axs[idx].set_title(f"{key}; n={sum(data[key][1])}")
     
     fig.suptitle(figname, fontsize=20)
-    fig.savefig(f'output/figures/entity_parsing/{figname}_pie.png')
+    fig.savefig(f'{folder}/{figname}_pie.png')
+    plt.close()

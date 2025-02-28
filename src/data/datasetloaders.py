@@ -116,6 +116,7 @@ def _load_defan() -> datasets.DatasetDict:
     BATCH_SIZE, PARAPHRASE_SIZE = 15, 14
     DEF_AN_DIR = 'res/defan'
     output = datasets.DatasetDict({'val': None, 'val_paraphrased': None})
+    starting_id = 0
     
     for file in sorted(os.path.join(DEF_AN_DIR, f) for f in os.listdir(DEF_AN_DIR) if f.endswith('.csv')):
         # Load and process file
@@ -133,8 +134,8 @@ def _load_defan() -> datasets.DatasetDict:
         for idx in range(0, len(data), BATCH_SIZE):
             # Add validation sample
             for col in data.column_names:
-                val[col].append(f"defan_{idx}" if col == 'id' else data[idx][col])
-                val_pp[col].extend([f"defan_{idx}" if col == 'id' else data[i][col] 
+                val[col].append(f"defan_{idx}_{domain[:5]}" if col == 'id' else data[idx][col])
+                val_pp[col].extend([f"defan_{idx}_{domain[:5]}" if col == 'id' else data[i][col] 
                                   for i in range(idx + 1, idx + BATCH_SIZE)])
         
         # Convert to datasets

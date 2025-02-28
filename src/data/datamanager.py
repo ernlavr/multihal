@@ -14,28 +14,32 @@ import src.utils.singleton as sing
 class DataManager(metaclass=sing.Singleton):
     def __init__(self, args):
         self.column_mapper = cm.ColumnMapper()
-        self.df = self.column_mapper.get_blank_df()
-        self.df_pp = self.column_mapper.get_blank_df()
+        self.df : pl.DataFrame = self.column_mapper.get_blank_df()
+        self.df_pp : pl.DataFrame = self.column_mapper.get_blank_df()
         self.args = args
         
 
-        if args.load_premade_dataset is None:
+        if args.continue_from_previous_state is None:
             self.ds = dl.load_data(args)
             self.merge_data()
-            logging.info(f"Parsed dataset of size: {self.df.shape[0]}")
             self.serialize_ds()
         else:
             self.df = self.get_premade_dataset(args)
+            
+        logging.info(f"Parsed dataset of size: {self.df.shape[0]}")
+        
+        
 
     def get_premade_dataset(self, args):
         # get extension
-        ext = args.load_premade_dataset.split('.')[-1]
+        ds_path = args.continue_from_previous_state['dataset']
+        ext = ds_path.split('.')[-1]
         if ext == 'csv':
-            return pl.read_csv(args.load_premade_dataset)
+            return pl.read_csv(ds_path)
         elif ext == 'parquet':
-            return pl.read_parquet(args.load_premade_dataset)
+            return pl.read_parquet(ds_path)
         elif ext == 'json':
-            return pl.read_json(args.load_premade_dataset)
+            return pl.read_json(ds_path)
 
     def get_dataset(self, args=None) -> pl.DataFrame:
         """
@@ -54,11 +58,11 @@ class DataManager(metaclass=sing.Singleton):
 
     def serialize_ds(self):
         """ Serializes the datasets into the main dataframe """
-        data_dir = 'output/data/'
+        data_dir = self.args.data_dir
         os.makedirs(data_dir, exist_ok=True)
 
         if self.args.debug_mode:
-            self.df.sample(n=self.args.n_pds).write_csv(os.path.join(data_dir, 'data_sampled.csv'))
+            self.df.sample(n=self.args.n_pds).write_csv(os.path.join(data_dir, 'multihal_debug_sampled.csv'))
 
         if self.args.save_full_data:
             self.df.write_csv(os.path.join(data_dir, 'multihal_unprocessed.csv'))
@@ -66,6 +70,26 @@ class DataManager(metaclass=sing.Singleton):
         if self.args.save_basic_stats:
             fig.plot_ds_stats(self.df)
 
+    def subsample(self, n: int, data: pl.DataFrame) -> pl.DataFrame:
+        """ Evenly sample the dataframe from each dataset, for each domain/subdomain/subdataset
+            to match n as closely and as evenly as possible.
+        """
+        subsampled = []
+        points_per_dataset = n // len(data['source_dataset'].unique())
+        
+        for ds_name, ds_split in data.group_by('source_dataset', maintain_order=True):
+            points_per_subgroup = points_per_dataset // len(ds_split['domain'].unique())
+            
+            for sub_ds_name, sub_ds_split in ds_split.group_by('domain', maintain_order=True):
+                if len(sub_ds_split) < points_per_subgroup:
+                    subsampled.append(sub_ds_split)
+                else:
+                    domain_split_sampled = sub_ds_split.sample(n=points_per_subgroup, seed=self.args.seed)
+                    subsampled.append(domain_split_sampled)
+        
+        output = pl.concat(subsampled)
+        output = output.sample(fraction=1.0, with_replacement=False, seed=self.args.seed, shuffle=True)     
+        return pl.concat(subsampled)
     
     def merge_data(self):
         merge_funcs = {

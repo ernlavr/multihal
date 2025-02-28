@@ -164,7 +164,7 @@ class DatasetAnalyser():
         # Remove the duplicate rows
         if self.args.debug_mode:
             tmp = df_tmp.with_row_index().filter(pl.col("index").is_in(col_)).drop('index')
-            tmp.write_json(f"output/rows_removed_after_{sent_sim_metric}.json")
+            tmp.write_json(f"{self.args.data_dir}/rows_removed_after_{sent_sim_metric}.json")
             logging.info(f"Removed {len(col_)} duplicate rows based on cosine similarity; threshold: {threshold}")
             merged = list(zip(row_, col_))
             logging.info(f"Merged (src <- tgt): {merged}")
@@ -273,7 +273,7 @@ class DatasetAnalyser():
         # add column at 0 index
         similarities_t.insert_column(0, pl.Series('cols', cols))
         
-        similarities_t.write_csv("output/cos_sim_sentence_pairs.csv")
+        similarities_t.write_csv(f"{self.args.data_dir}/cos_sim_sentence_pairs.csv")
         return None
 
 

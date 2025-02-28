@@ -21,8 +21,9 @@ from tqdm import tqdm
 
 class KGManager():
 
-    def __init__(self, dataframe: pl.DataFrame, continue_from=None):
-        self.logger = log.KgLogger(create_log=True, continue_from=continue_from)
+    def __init__(self, dataframe: pl.DataFrame, args, continue_from=None):
+        self.logger = log.KgLogger(args, create_log=True, continue_from=continue_from)
+        self.args = args
         self.bridge = br.NetworkBridge()
         self.dataframe = dataframe
         self.spacy_model = spacy.load("en_core_web_trf")
@@ -31,7 +32,6 @@ class KGManager():
         self.hops = 2
         
         # Logging
-
         self.ignore_properties = uti.fill_ignore_properties("res/wd_properties_to_ignore/ids_to_remove.json")
         self.all_properties = uti.fill_all_properties('res/wd_properties_to_ignore/properties.json')
 
@@ -58,6 +58,24 @@ class KGManager():
             pass #TODO implement
 
         return trip
+    
+    def decode_statement_labels(self, statement: list):
+        labels = []
+        for entity in statement:
+            if entity.startswith('Q') and len(entity) < 14:
+                query = qb.get_label_of_entity(entity)
+                response = self.bridge.send_message(message=query)
+                labels.append(response['results']['bindings'][0]['label']['value'])
+            elif entity.startswith('P'):
+                property = self.all_properties.get(entity, None)
+                if property is not None:
+                    property = property['label']
+                labels.append(property)
+        
+        if len(statement) != len(labels):
+            logging.error(f"Length of statement: {len(statement)} does not match length of labels: {len(labels)}; statement: {statement}; labels: {labels}")
+        return labels
+            
     
     def checkValidDatapoint(self, datapoint):
         """ Check if a datapoint contains ans and ans_str """
@@ -125,18 +143,17 @@ class KGManager():
                 output.append(entry)
         return output
         
-    def get_falcon_query(self, query_text):
-        url = "https://labs.tib.eu/falcon/falcon2/api?mode=long&k=5&db=1"
+    def get_falcon_query(self, query_text, timeout=5):
+        url = "https://labs.tib.eu/falcon/falcon2/api?mode=long&k=5"
         headers = {"Content-Type": "application/json"}
         data = {"text": query_text}
-
+        logging.info("Running Falcon API")
         start_time = time.time()
-        timeout = 20
         try:
             response = requests.post(url, headers=headers, data=json.dumps(data), timeout=timeout)
-        except requests.exceptions.Timeout:
+        except:
             logging.info(f"Falcon API Timeout t={timeout}s: {query_text}")
-            return None
+            return [f"<TIMEOUT>{data['text']}</TIMEOUT>"]
         
         end_time = time.time()
         logging.info(f"Query time (s): {end_time - start_time:.2f}")
@@ -157,49 +174,68 @@ class KGManager():
         combined_entities = entities_dbpedia + entities_wikidata
         if len(combined_entities) == 0:
             logging.info(f"No entities found in either Wikidata or Dbpedia for query: {query_text}")
-            return None
+            return ["<NO_ENTITIES_FOUND>"]
 
         for i in combined_entities:
             output.append(i['URI'])
         
         return output
     
+    def process_queryable_entities(self, entity, entity_type, timeout=60):
+        if 'N/A' in entity:
+            query_result = self.get_falcon_query(entity_type)
+            if entity is None:
+                logging.info(f"Error when querying Falcon API for {entity_type}, returned None.")
+                return None
+        
+        elif f"<TIMEOUT>{entity_type}</TIMEOUT>" in entity:
+            logging.info(f"Timeout when querying Falcon API for {entity_type}.")
+            query_result = self.get_falcon_query(entity_type, timeout=timeout)
+            if query_result is None:
+                logging.info(f"Error when querying Falcon API for {entity_type}, returned None.")
+                return None
+        else:
+            return entity.split(config.LIST_SEP)
+            
+        # Handle if a timeout happened in a list (e.g. objects)
+        if config.LIST_SEP in entity:
+            entity = entity.split(config.LIST_SEP).extend(query_result)
+        else:
+            entity = query_result
+        
+        return list(set(entity))  # Remove duplicates
+    
     def process_falcon_strategy(self, datapoint):
-        # get queries for the input
-        queryable_subjects = self.get_falcon_query(datapoint['input'])
+        # Process queryable subjects
+        queryable_subjects = self.process_queryable_entities(datapoint['subjects'], datapoint['input'])
         if queryable_subjects is None:
-            logging.info(f"Error when querying Falcon API for input, returned None: {datapoint['input']}")
             return None
 
-        queryable_subjects = list(set(queryable_subjects)) # remove duplicates
-
-        # get queries for output
+        # Process queryable objects
         outputs = [datapoint['output']]
         if datapoint['optional_output'] is not None:
             outputs.extend(datapoint['optional_output'].split(config.LIST_SEP))
-
-        outputs = list(set(outputs)) # remove duplicates
-        # if outputs > 5
+        
+        outputs = list(set(outputs))  # Remove duplicates
         if len(outputs) > 3:
             outputs = outputs[:3]
             logging.info(f"Truncated outputs to 3 for datapoint: {datapoint['id']}")
-
+        
         queryable_objects = []
-        for i in outputs:
-            qs = self.get_falcon_query(i)
+        for output in outputs:
+            qs = self.get_falcon_query(output)
             if qs is None:
-                logging.info(f"Error when querying Falcon API for output ID {datapoint['id']}: {i}")
+                logging.info(f"Error when querying Falcon API for output ID {datapoint['id']}: {output}")
                 continue
             queryable_objects.extend(qs)
-
-        # flatten queryable objects
+        
         queryable_objects = uti.flatten_if_2d(queryable_objects)
-        queryable_objects = list(set(queryable_objects)) # remove duplicates
+        queryable_objects = list(set(queryable_objects))  # Remove duplicates
 
-        queryable_subjects = f" {config.LIST_SEP} ".join(queryable_subjects)
-        queryable_objects = f" {config.LIST_SEP} ".join(queryable_objects)
-
-        return queryable_subjects, queryable_objects
+        return (
+            f" {config.LIST_SEP} ".join(queryable_subjects),
+            f" {config.LIST_SEP} ".join(queryable_objects)
+        )
     
     def process_spacy_strategy(self, datapoint):
         # make it a list, because we may have multiple sequences in the generic function
@@ -346,28 +382,52 @@ class KGManager():
             datapoint['responses'] = responses
             _datapoint = pl.from_dict(datapoint, strict=False)
             data = data.update(_datapoint, on="id")
-            data.write_json("output/data/data_subj_obj_parsed_queried_wd.json")
+            data.write_json(f"{self.args.data_dir}/data_subj_obj_parsed_queried_wd.json")
         logging.info(f"Total number of queries: {total_queries}")
         return data
             
-                    
+            
+    def get_unprocessed_datapoints(self, data: pl.DataFrame):
+        """Returns unprocessed datapoints where either 'subjects' or 'objects' 
+        is 'N/A' or contains the '<TIMEOUT>' tag.
+        """
+        output = data.filter(
+            (pl.col('subjects').str.contains('N/A')) | 
+            (pl.col('objects').str.contains('N/A')) | 
+            (pl.col('subjects').str.contains("<TIMEOUT>")) | 
+            (pl.col('objects').str.contains("<TIMEOUT>"))
+        )
+        return output
 
+                
     def process(self, data: pl.DataFrame) -> dict:
         logging.info("<--- End of Header --->\n")
         self.df = self.logger.getResultDataframe(data, self.hops)
         start_time = time.time()
-        # self.data = self.data.select(range(23, 30))
+        data.write_json(f"deleteme_before_full.json")
+        column_order = data['id'].to_list()
         
         # create two new columns for subjects and objects
-        data = data.with_columns(
-            subjects = pl.lit('N/A'),
-            objects = pl.lit('N/A')
-        )
-
-        for datapoint in tqdm(data.iter_rows(named=True), "Processing Dataset", total=data.shape[0]):
+        if 'subjects' not in data.columns and 'objects' not in data.columns:
+            data = data.with_columns(
+                subjects = pl.lit('N/A'),
+                objects = pl.lit('N/A')
+            )
+        
+        # get rows where either subjects or objects is N/A or <TIMEOUT>
+        # replace subjects, objects "" with N/A
+        def replace_cols(data, col, val, replace_val):
+            return data.with_columns(pl.when(pl.col(col) == val).then(pl.lit(replace_val)).otherwise(pl.col(col)).alias(col))
+        data = replace_cols(data, "subjects", "", "N/A")
+        data = replace_cols(data, "objects", "", "N/A")
+        
+        data_to_query = self.get_unprocessed_datapoints(data)
+        data_to_not_query = data.join(data_to_query, on="id", how="anti")
+        
+        for datapoint in tqdm(data_to_query.iter_rows(named=True), "Processing Dataset", total=data_to_query.shape[0]):
             if not self.checkValidDatapoint(datapoint):
                 self.df = self.logger.concatResults(self.df, datapoint, [])
-                self.logger.saveResults(self.df)
+                self.logger.saveResults(self.df, self.args)
                 continue
             
             if datapoint['input'] is None or datapoint['output'] is None:
@@ -380,30 +440,27 @@ class KGManager():
             if strategy_result is None:
                 logging.info(f"Strategy result is None for datapoint: {datapoint['id']}")
                 continue
-            
-            results = []
-            # if len(utterance_tok) and len(output_ents_tok) is not 0:
-            #     for ent in utterance_tok:
-            #         for output in output_ents_tok:
-            #             in_text = " ".join([i.text for i in ent])
-            #             out_text = " ".join([i.text for i in output_ents_tok[0]])
-
-            #             # ent_text = uti.remove_starting_pronouns(ent_text)
-            #             # logging.info(f"Attempted remove starting 'The' from entity: {ent.text} -> {ent_text}")
-            #             result = self.processSingle(in_text, out_text, datapoint)
-            #             if result is not None:
-            #                 results.append(result)
-            #                 break
-
+           
             queryable_subjects, queryable_objects = strategy_result
             datapoint['subjects'] = queryable_subjects
             datapoint['objects'] = queryable_objects
 
             # replace the row in the dataframe
             datapoint = pl.from_dict(datapoint, strict=False)
-            data = data.update(datapoint, on="id")
+            data_to_query = data_to_query.update(datapoint, on="id")
             continue
-
+        
+        
+        # concatenate data and data_non_na
+        data = pl.concat([data_to_not_query, data_to_query])
+        # sort data by order
+        id_df = pl.DataFrame({"id": column_order})
+        data = id_df.join(data, on="id", how="left")
+        data.write_json(f"deleteme_after.json")
+        
+        # save
+        data.write_json(f"{self.args.data_dir}/data_falcon_parsed.json")
+        
         # print stats
         for split in data.group_by('source_dataset'):
             dataset_name = "; ".join(split[0])
@@ -427,7 +484,7 @@ class KGManager():
                 "obj": obj_data,
                 "obj_core_ents": np.unique(obj_sep_counts, return_counts=True)
             }
-            figs.plot_pie(plot_data, figname=dataset_name)
+            figs.plot_pie(plot_data, figname=dataset_name, output_dir=self.args.fig_dir + "/entity_parsing")
             
         end_time = time.time()
         logging.info(f"Total time taken: {end_time - start_time}")
@@ -435,14 +492,9 @@ class KGManager():
         logging.info(f"Total number of datapoints: {data.shape[0]}")
         logging.info(f"Number of datapoints where subjects is not N/A: {data.filter(data['subjects'] != 'N/A').shape[0]}")
         logging.info(f"Number of datapoints where objects is not N/A: {data.filter(data['objects'] != 'N/A').shape[0]}")
-        data.write_json("output/data/data_subj_obj_parsed.json")
-
-            
-            # self.logger.logTimeDetails(start_time)
-            # logging.info("") # break after each question
-
-            # self.df = self.logger.concatResults(self.df, datapoint, results)          
-            # self.logger.saveResults(self.df)
+        logging.info(f"Number of datapoints where subjects and objects is not N/A: {data.filter((data['subjects'] != 'N/A') & (data['objects'] != 'N/A')).shape[0]}")
+        
+        return data
                 
                 
         

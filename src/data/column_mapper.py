@@ -266,7 +266,7 @@ class ColumnMapper(metaclass=Singleton):
         halubench = halubench.filter(pl.col('label') == 'PASS')
 
         # map source datasets to domains
-        halubench_domains = {'DROP': 'general', 'covidQA': 'healthcare', 'pubmedQA': 'healthcare', 'FinanceBench': 'finance', 'RAGTruth': 'ragtruth'}
+        halubench_domains = {'DROP': 'general', 'covidQA': 'covid', 'pubmedQA': 'pubmed', 'FinanceBench': 'finance', 'RAGTruth': 'ragtruth'}
         
         halubench = halubench.with_columns(
             pl.col('source_ds') \

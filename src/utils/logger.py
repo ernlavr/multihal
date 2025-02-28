@@ -5,17 +5,33 @@ import time
 import numpy as np
 from datetime import datetime
 import sys
+import src.utils.singleton as sing
 
-
-class KgLogger():
-    def __init__(self, create_log=False, continue_from=None):
+class KgLogger(metaclass=sing.Singleton):
+    def __init__(self, args, create_log=False, continue_from=None):
         self.timestamp = time.strftime("%Y%m%d-%H%M%S")
         self.continue_from = continue_from
         self.num_queries = 0
+        self.args = args
         if create_log:
-            self.setupLogging()
+            psl = None
+            try:
+                previous_run_dir = os.path.join(args.output_dir, args.continue_from_previous_state['RUN_DIR'])
+                # find the log file in conf directory
+                config_dir = previous_run_dir + "/conf"
+                for file in os.listdir(config_dir):
+                    if file.endswith(".log"):
+                        psl = os.path.join(config_dir, file)
+                
+                if os.path.exists(psl):
+                    self.setupLogging(previous_state_log=psl)
+                    return
+            except:
+                pass
+            
+            self.setupLogging(previous_state_log=psl)
 
-    def setupLogging(self):
+    def setupLogging(self, previous_state_log=None):
         print("setup logging")
         # Remove any existing handlers
         for handler in logging.root.handlers[:]:
@@ -23,7 +39,10 @@ class KgLogger():
         
         # Ensure the logs directory exists
         os.makedirs('logs', exist_ok=True)
-        filename = f'logs/{self.timestamp}.log'
+        
+        filename = f'{self.args.conf_dir}/{self.timestamp}.log'
+        if previous_state_log:
+            filename = previous_state_log
         
         # Create a file handler for logging to a file
         file_handler = logging.FileHandler(filename)
@@ -39,6 +58,10 @@ class KgLogger():
         
         # Configure logging with both handlers
         logging.basicConfig(handlers=[file_handler, stream_handler], level=logging.INFO)
+        
+        if previous_state_log:
+            logging.info("<---                                              --->")
+            logging.info(f"<--- Continuing from previous state              --->")        
         logging.info("Starting logging")
 
     def setupContinueLogging(self):
@@ -107,13 +130,9 @@ class KgLogger():
         if len(records) == 0: # loop is empty
             logging.info(f"No results for Hop {hop}")
     
-    def saveResults(self, df):
+    def saveResults(self, df, args):
         os.makedirs('output/data', exist_ok=True)
-
-        if self.continue_from:
-            df.to_csv(f'output/data/multihal_kgs_{self.continue_from}.csv', index=False)
-        else:
-            df.to_csv(f'output/data/multihal_kgs{self.timestamp}.csv', index=False)
+        df.to_csv(f'{args.data_dir}/multihal_kgs{self.timestamp}.csv', index=False)
 
     def logTimeDetails(self, start_time=None):
         if self.num_queries == 0:

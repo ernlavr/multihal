@@ -28,5 +28,5 @@ class SentenceEmbeddings():
         
         if self.args.debug_mode:
             logging.info("Got embeddings")
-            data.write_json('output/data/data_with_embeddings.json')
+            data.write_json(f'{self.args.data_dir}/multihal_with_embeddings.json')
         return data

@@ -55,6 +55,16 @@ def get_query_so_hops(subject, obj, hops):
     return add_eos(final_query) # eos as custom protocol 
 
 
+def get_label_of_entity(entity):
+    q = f"""
+        {_define_prefixes()}
+        select  * where {{
+            wd:{entity} rdfs:label ?label .
+            FILTER (langMatches( lang(?label), "EN" ) )
+        }} 
+        LIMIT 1
+        """
+    return add_eos(q)
 
 
 def getquery(entity):
