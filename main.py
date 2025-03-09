@@ -29,7 +29,7 @@ import src.network.udp_manager as br
 import src.evaluation.LLMJudge as llmJudge
 
 
-def generate_sentence_embeddings(data_manager: dm.DataManager, args: Any) -> Tuple[np.ndarray, anlyz.DatasetAnalyser]:
+def generate_sentence_embeddings(dataset: pl.DataFrame, args: Any) -> Tuple[np.ndarray, anlyz.DatasetAnalyser]:
     """
     Generate sentence embeddings from the dataset and create a corresponding analyzer.
 
@@ -42,11 +42,11 @@ def generate_sentence_embeddings(data_manager: dm.DataManager, args: Any) -> Tup
                                                    the dataset analyzer.
     """
     # Create the embedder using the dataset and args
-    embedder = se.SentenceEmbeddings(data_manager.df, args)
+    embedder = se.SentenceEmbeddings(dataset, args)
     # Generate embeddings from the dataset
-    embeddings = embedder.gen_embeddings(data_manager.df)
+    embeddings = embedder.gen_embeddings(dataset)
     # Initialize the analyzer with the generated embeddings
-    analyzer = anlyz.DatasetAnalyser(embeddings, args)
+    analyzer = anlyz.DatasetAnalyser(dataset, args)
     logging.info(f"Number of datapoints after embedding: {embeddings.shape[0]}")
     return embeddings, analyzer
 
@@ -74,16 +74,16 @@ def remove_duplicates(args: Any, dataframe: Any, analyzer: anlyz.DatasetAnalyser
         raise ValueError(f"Unknown similarity metric: {args.sent_sim_metric}")
 
     # Remove duplicates based on the similarity matrix and provided threshold.
-    removed = analyzer.remove_duplicates_by_sim_matrix(similarities, threshold=threshold, **args.__dict__)
+    removed = analyzer.remove_duplicates_by_sim_matrix(similarities, dataframe, threshold=threshold, **args.__dict__)
     # Save the removed duplicates information to a JSON file
     removed.write_json(f"{args.data_dir}/multihal_removed_duples_{args.sent_sim_metric}.json")
     # Log domain distribution after duplicate removal
     analyzer.log_domains(dataframe)
-    logging.info(f"Number of datapoints after removing duplicates: {dataframe.shape[0]}")
+    logging.info(f"Number of datapoints after removing duplicates: {removed.shape[0]}")
     return removed
 
 
-def subsample_data(data_manager: dm.DataManager, args: Any) -> Any:
+def subsample_data(data_manager: dm.DataManager, dataset: pl.DataFrame, args: Any) -> Any:
     """
     Subsample the dataset and generate corresponding pie charts for dataset and domain counts.
 
@@ -95,7 +95,7 @@ def subsample_data(data_manager: dm.DataManager, args: Any) -> Any:
         Any: The subsampled dataset.
     """
     # Subsample the dataset using the provided sample size
-    dataset = data_manager.subsample(args.subset_sample_size, data_manager.get_dataset())
+    dataset = data_manager.subsample(args.subset_sample_size, dataset)
     # Plot dataset counts by source
     labels, counts = np.unique(dataset['source_dataset'], return_counts=True)
     fig.plot_pie({"Dataset counts": (labels, counts)}, "Dataset counts", args.fig_dir + "/subsampling")
@@ -122,7 +122,7 @@ def run_clustering(analyzer: anlyz.DatasetAnalyser, embeddings: np.ndarray) -> N
     analyzer.run_dim_red(embeddings)
 
 
-def generate_analysis_figures(data_manager: dm.DataManager, args: Any) -> None:
+def generate_analysis_figures(dataset: pl.DataFrame, args: Any) -> None:
     """
     Generate analysis figures and log domain statistics.
 
@@ -131,10 +131,10 @@ def generate_analysis_figures(data_manager: dm.DataManager, args: Any) -> None:
         args (Any): Configuration object.
     """
     # Plot dataset statistics
-    fig.plot_ds_stats(data_manager.df)
+    fig.plot_ds_stats(dataset)
     # Initialize a temporary analyzer to get domain statistics
     analyzer = anlyz.DatasetAnalyser(None, None)
-    domain_stats = analyzer.get_list_of_domains_and_counts(data_manager.df)
+    domain_stats = analyzer.get_list_of_domains_and_counts(dataset)
     logging.info(pprint.pformat(domain_stats))
 
 
@@ -164,7 +164,7 @@ def query_kg(dataset: Any, args: Any) -> None:
     bridge = br.NetworkBridge()
     kg_manager = kgm.KGManager(dataset, args)
     # Query the knowledge graph with a maximum of 3 hops
-    kg_manager.query_kg(dataset, bridge, max_hops=3)
+    kg_manager.query_kg(dataset, bridge, max_hops=2)
     logging.info("Finished querying KGs")
 
 
@@ -183,7 +183,7 @@ def evaluate_triples(dataset: Any, args: Any) -> None:
     fig.plot_pie({"Relevance count": (relevance_values, relevance_counts)},
                  "LLM as judge relevance counts;")
 
-def previous_state_continuations(data_manager: dm.DataManager, args) -> pl.DataFrame:
+def previous_state_continuations(dataset: pl.DataFrame, args) -> pl.DataFrame:
     # Load the dataset to continue from
     state = args.continue_from_previous_state
     dataset_loc = state.get("dataset")
@@ -194,16 +194,11 @@ def previous_state_continuations(data_manager: dm.DataManager, args) -> pl.DataF
     if dataset_loc is None or RUN_DIR is None or function_name is None:
         raise ValueError("Previous state is not properly defined")
     
-    dataset = data_manager.get_dataset()
-
     # Run the functions
     for i in function_name:
         func = globals()[i]
         dataset = func(dataset, args)
-        
     
-    pass
-
 
 def main() -> None:
     """
@@ -220,23 +215,26 @@ def main() -> None:
     logging.info("Starting data manager")
     data_manager = dm.DataManager(args)
     analyzer = None
-    dataset = None
+    dataset = data_manager.get_dataset()
     
     if args.continue_from_previous_state:
-        previous_state_continuations(data_manager, args)
+        previous_state_continuations(dataset, args)
         return
-
+    
+    if args.remove_refused_answers:
+        dataset = data_manager.remove_refused_answers(dataset)
+        
     # Generate sentence embeddings if enabled
     if args.gen_sent_embeds:
-        dataset, analyzer = generate_sentence_embeddings(data_manager, args)
+        dataset, analyzer = generate_sentence_embeddings(dataset, args)
 
     # Remove duplicate entries if enabled
     if args.remove_duplicates:
         dataset = remove_duplicates(args, dataset, analyzer)
-
+    
     # Subsample the dataset if a sample size is provided
     if args.subset_sample_size is not None:
-        dataset = subsample_data(data_manager, args)
+        dataset = subsample_data(data_manager, dataset, args)
 
     # Run clustering analysis if enabled
     if args.run_clustering:

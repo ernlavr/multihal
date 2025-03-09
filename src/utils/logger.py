@@ -46,8 +46,8 @@ class KgLogger(metaclass=sing.Singleton):
         
         # Create a file handler for logging to a file
         file_handler = logging.FileHandler(filename)
-        file_handler.setLevel(logging.INFO)
-        file_formatter = logging.Formatter('%(asctime)s %(message)s')
+        file_handler.setLevel(logging.DEBUG)
+        file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(file_formatter)
         
         # Create a stream handler for logging to stdout
@@ -57,7 +57,7 @@ class KgLogger(metaclass=sing.Singleton):
         stream_handler.setFormatter(stream_formatter)
         
         # Configure logging with both handlers
-        logging.basicConfig(handlers=[file_handler, stream_handler], level=logging.INFO)
+        logging.basicConfig(handlers=[file_handler, stream_handler], level=logging.DEBUG)
         
         if previous_state_log:
             logging.info("<---                                              --->")

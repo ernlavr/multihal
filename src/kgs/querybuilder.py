@@ -1,3 +1,18 @@
+def get_with_qualifier():
+    return r"""
+    SELECT ?p ?pLabel ?o ?oLabel ?qv WHERE {
+        wd:Q9364 p:P166 ?statement .  # P166 = award received
+        ?statement ps:P166 ?o .  # Get the actual item (e.g., Nobel Prize in Literature)
+        ?statement pq:P585 ?qv .  # Get the point-in-time qualifier
+        FILTER(CONTAINS(STR(?qv), "1964"))  # Ensure the qualifier contains "1962"
+
+        # Fetch labels
+        SERVICE wikibase:label { 
+            bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". 
+        }
+    }
+    """
+
 def _define_prefixes():
     return r"""
         PREFIX wd: <http://www.wikidata.org/entity/>
@@ -82,6 +97,21 @@ def getquery(entity):
     
     # cleanup the string
     return add_eos(q)
+
+def get_dbpedia_sameas_query(entity):
+    q =  f"""
+        PREFIX owl: <http://www.w3.org/2002/07/owl#>
+        PREFIX dbr: <http://dbpedia.org/resource/>
+        PREFIX dbp: <http://dbpedia.org/property/>
+
+        SELECT ?wikidataEntity WHERE {{
+            dbr:{entity} owl:sameAs ?wikidataEntity .
+            FILTER (CONTAINS(STR(?wikidataEntity), "wikidata.org"))
+        }}
+    """
+    return q
+    
+    
 
 def getAKAquery(entity):
     q = f"""

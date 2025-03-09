@@ -6,8 +6,9 @@ Created on 19 Mar 2019
 import time
 
 from SPARQLWrapper import SPARQLWrapper, JSON
-from api.entity import KGEntity
+from src.network.api.entity import KGEntity, URI_KG
 import sys
+import logging
 
 
 class SPARQLEndpoint(object):
@@ -206,7 +207,7 @@ class SPARQLEndpoint(object):
         
     
     
-    def getQueryResults(self, query, attempts=5):
+    def getQueryResults(self, query, attempts=4):
         
         try:
             
@@ -216,9 +217,10 @@ class SPARQLEndpoint(object):
         
         except Exception as e:
             
-            print("Query '%s' failed. Attempts: %s" % (query, str(attempts)))
-            print("\t" + str(e))
-            time.sleep(60) #to avoid limit of calls, sleep 60s
+            logging.info("Query '%s' failed. Attempts: %s" % (query, str(attempts)))
+            logging.info("\t" + str(e))
+
+            time.sleep(21) #to avoid limit of calls, sleep 60s
             attempts-=1
             if attempts>0:
                 return self.getQueryResults(query, attempts)
@@ -242,7 +244,7 @@ class SPARQLEndpoint(object):
         for result in results["results"]["bindings"]:
             #print(result)
             #print(result["uri"]["value"])
-            uri_value = result["uri"]["value"]
+            uri_value = result["wikidataEntity"]["value"]
             
             if not filter_uri or uri_value.startswith(URI_KG.dbpedia_uri) or uri_value.startswith(URI_KG.wikidata_uri) or uri_value.startswith(URI_KG.schema_uri) or uri_value.startswith(URI_KG.dbpedia_uri_resource) or uri_value.startswith(URI_KG.dbpedia_uri_property): 
                 result_set.add(uri_value)

@@ -105,7 +105,7 @@ class DatasetAnalyser():
             pickle.dump(cos_sim, f)
         return cos_sim
     
-    def remove_duplicates_by_sim_matrix(self, sim_matrix, threshold=0.99, **kwargs) -> pl.DataFrame:
+    def remove_duplicates_by_sim_matrix(self, sim_matrix, dataset, threshold=0.99, **kwargs) -> pl.DataFrame:
         """ Remove duplicates based on cosine similarity """
         # Compute the cosine similarity between the embeddings
         logging.info("Removing duplicates based on similarity")
@@ -126,7 +126,7 @@ class DatasetAnalyser():
                 row_.append(r.item())
                 col_.append(c.item())
 
-        df_tmp = self.df
+        df_tmp = dataset
         cols_to_map = ['output', 'optional_output', 'incorrect_answers', 'context', 'context_type']
 
         # merge target into source

@@ -6,9 +6,10 @@ import src.data.column_mapper as cm
 import src.analysis.figures as fig
 import logging
 import src.utils.singleton as sing
+import src.utils.helpers as utils
+from src.utils.config import LIST_SEP
 
 # TODO:
-# - Add configs for including only specific datasets
 # - Add configs for including subsets of datasets (e.g. see halueval)
 
 class DataManager(metaclass=sing.Singleton):
@@ -91,6 +92,25 @@ class DataManager(metaclass=sing.Singleton):
         output = output.sample(fraction=1.0, with_replacement=False, seed=self.args.seed, shuffle=True)     
         return pl.concat(subsampled)
     
+    def remove_refused_answers(self, data: pl.DataFrame) -> pl.DataFrame:
+        refusal_strings = [i.lower() for i in utils.get_refusal_strings()]
+        tmp = data.with_columns(
+            pl.concat_str([
+                pl.col("output"), 
+                pl.col("optional_output")
+                ], 
+                separator=LIST_SEP,
+                ignore_nulls=True
+            ).alias("output_opt_output").str.to_lowercase()
+        )    
+        mask = tmp["output_opt_output"].str.contains("|".join(refusal_strings))
+        data = data.filter(~mask)
+        
+        logging.info(f"Removed refused LLM answers: {len(mask.filter(mask == True))} refusal answers; New length {len(data)}")
+
+        return data
+            
+    
     def merge_data(self):
         merge_funcs = {
             'shroom2024': self.column_mapper.merge_shroom2024,
@@ -112,6 +132,9 @@ class DataManager(metaclass=sing.Singleton):
                     self.df = merge_funcs[ds](self.df, self.ds[ds][split].to_polars())
 
 
+        
+        # remove where output is None
+        self.df = self.df.filter(~pl.col("output").is_null())
         self.df = self.df.with_columns(pl.col('domain').str.to_lowercase())
         # fill in missing values
         self.df = self.df.with_columns(pl.col("domain").replace(None, "N/A"))

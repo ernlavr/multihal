@@ -135,6 +135,8 @@ class GlobalConfig(metaclass=singl.Singleton):
             parse_text_to_ents=False,
             run_qa_kgs=False,
             evaluate=False,                  # Evaluate the dataset triples
+            remove_refused_answers=False,
+            api_mode='long',                # string, either 'long' or 'short' for Falcon2.0 mode
             
             load_premade_dataset=None,      # string, path to a premade dataset
             continue_from_previous_state=None, # dict {RUN_ID: str, dataset: str, functions: list}

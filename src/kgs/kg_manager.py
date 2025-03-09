@@ -2,6 +2,7 @@ import spacy
 
 import src.kgs.querybuilder as qb
 import src.network.api.local_api as api
+import src.network.api.endpoints as ep
 import src.network.udp_manager as br
 import src.utils.helpers as uti
 import src.utils.logger as log
@@ -30,6 +31,7 @@ class KGManager():
         self.api = api.WikidataAPI()
         self.query_engine = br.NetworkBridge()
         self.hops = 2
+        self.dbpedia_cache = {}
         
         # Logging
         self.ignore_properties = uti.fill_ignore_properties("res/wd_properties_to_ignore/ids_to_remove.json")
@@ -143,8 +145,8 @@ class KGManager():
                 output.append(entry)
         return output
         
-    def get_falcon_query(self, query_text, timeout=5):
-        url = "https://labs.tib.eu/falcon/falcon2/api?mode=long&k=5"
+    def get_falcon_query(self, query_text, api_mode='long', timeout=5):
+        url = f"https://labs.tib.eu/falcon/falcon2/api?mode={api_mode}&k=3&db=1"
         headers = {"Content-Type": "application/json"}
         data = {"text": query_text}
         logging.info("Running Falcon API")
@@ -170,8 +172,10 @@ class KGManager():
 
         # safe unpacking
         entities_dbpedia = response.get('entities_dbpedia') or []
+        wikidata_ents_from_dbpedia = self.process_dbpedia_ents(entities_dbpedia)
+        
         entities_wikidata = response.get('entities_wikidata') or []
-        combined_entities = entities_dbpedia + entities_wikidata
+        combined_entities = entities_wikidata + wikidata_ents_from_dbpedia
         if len(combined_entities) == 0:
             logging.info(f"No entities found in either Wikidata or Dbpedia for query: {query_text}")
             return ["<NO_ENTITIES_FOUND>"]
@@ -181,29 +185,85 @@ class KGManager():
         
         return output
     
+    def process_dbpedia_ents(self, entities):
+        if len(entities) == 0:
+            return []
+        
+        output = []
+        endpoint = ep.DBpediaEndpoint()
+        for i in entities:
+            entity = i['URI'].split('/')[-1]
+            
+            # few cleanup heuristics
+            if '(' in entity and ')' in entity:
+                entity = entity.replace('(', '\(').replace(')', '\)')
+            if ',' in entity:
+                entity = entity.replace(',', '\,')
+            if '&' in entity:
+                entity = entity.replace('&', '\&')
+            if entity.endswith('.'):
+                entity = entity[:-1] + '\.'
+            if entity.startswith('.'):
+                entity = '\.' + entity[1:]
+            if '!' in entity:
+                entity = entity.replace('!', '\!')
+            if "\'" in entity:
+                entity = entity.replace("\'", "\\\'")
+            if "+" in entity:
+                entity = entity.replace("+", "\+")
+                
+            entity = r"{}".format(entity)
+            
+            # try to get from cache
+            cached = self.dbpedia_cache.get(entity, None)
+            if cached is not None:
+                for i in cached:
+                    output.append({'URI': i})
+                continue
+            
+            self.dbpedia_cache[entity] = []
+            q = qb.get_dbpedia_sameas_query(entity)
+            results = endpoint.getQueryResultsArityOne(q)
+            if len(results) > 10:
+                logging.info(f"DBPedia entity has {len(results)} results, skipping: {entity}")
+                continue
+            
+            if results is not None:
+                if len(results) > 1:
+                    pass
+                for i in results:
+                    output.append({'URI': i})   
+                    self.dbpedia_cache[entity].append(i)
+        return output
+                
+            
+            
+    
     def process_queryable_entities(self, entity, entity_type, timeout=60):
         if 'N/A' in entity:
-            query_result = self.get_falcon_query(entity_type)
-            if entity is None:
-                logging.info(f"Error when querying Falcon API for {entity_type}, returned None.")
-                return None
-        
-        elif f"<TIMEOUT>{entity_type}</TIMEOUT>" in entity:
-            logging.info(f"Timeout when querying Falcon API for {entity_type}.")
-            query_result = self.get_falcon_query(entity_type, timeout=timeout)
+            query_result = self.get_falcon_query(entity_type, timeout=30)
             if query_result is None:
                 logging.info(f"Error when querying Falcon API for {entity_type}, returned None.")
                 return None
+        
+        elif f"<TIMEOUT>" in entity:
+            logging.info(f"Processing timeout when querying Falcon API for {entity_type}.")
+            # extract text between <TIMEOUT> </TIMEOUT>
+            query_result = self.get_falcon_query(entity_type, api_mode=self.args.api_mode, timeout=timeout)
+            if query_result is None:
+                logging.info(f"Error when querying Falcon API for {entity_type}, returned None.")
+                return None                
         else:
             return entity.split(config.LIST_SEP)
             
-        # Handle if a timeout happened in a list (e.g. objects)
-        if config.LIST_SEP in entity:
-            entity = entity.split(config.LIST_SEP).extend(query_result)
-        else:
-            entity = query_result
+        # # Handle if a timeout happened in a list (e.g. objects)
+        # if config.LIST_SEP in entity:
+        #     entity = [i.strip(' ') for i in entity.split(config.LIST_SEP) if '<TIMEOUT>' not in i]
+        #     entity.extend(query_result)
+        # else:
+        #     entity = query_result
         
-        return list(set(entity))  # Remove duplicates
+        return list(set(query_result))  # Remove duplicates
     
     def process_falcon_strategy(self, datapoint):
         # Process queryable subjects
@@ -223,11 +283,11 @@ class KGManager():
         
         queryable_objects = []
         for output in outputs:
-            qs = self.get_falcon_query(output)
-            if qs is None:
+            qo = self.process_queryable_entities(datapoint['objects'], output)
+            if qo is None:
                 logging.info(f"Error when querying Falcon API for output ID {datapoint['id']}: {output}")
                 continue
-            queryable_objects.extend(qs)
+            queryable_objects.extend(qo)
         
         queryable_objects = uti.flatten_if_2d(queryable_objects)
         queryable_objects = list(set(queryable_objects))  # Remove duplicates
@@ -338,13 +398,26 @@ class KGManager():
                 paths += f"{subj} {path} {obj} {config.LIST_SEP}"
 
         return paths
+    
+    def get_queryable_datapoints(self, data: pl.DataFrame):
+        """ Returns the datapoints that are queryable """
+        return data.filter(
+            (pl.col('subjects').str.contains("wikidata.org")) & 
+            (pl.col('objects').str.contains("wikidata.org")) &
+            (pl.col('responses') == 'N/A')
+        )
 
     def query_kg(self, data: pl.DataFrame, network_bridge: br.NetworkBridge, max_hops=3):
-        progress_bar = tqdm(data.iter_rows(named=True), total=data.shape[0])
+        if "responses" not in data.columns:
+            data = data.with_columns(
+                responses=pl.lit('N/A')
+            )
+        
+        queryable_datapoints = self.get_queryable_datapoints(data)
+        
+        progress_bar = tqdm(queryable_datapoints.iter_rows(named=True), total=queryable_datapoints.shape[0])
         # datapoint add column responses
-        data = data.with_columns(
-            responses=pl.lit('N/A')
-        )
+        
         total_queries = 0
 
         for datapoint in progress_bar:
@@ -362,7 +435,10 @@ class KGManager():
                 curr_hop = 1
                 while curr_hop <= max_hops:
                     # plug in the pair in the query
+                    query_time = time.time()
                     query = qb.get_query_so_hops(subj, obj, curr_hop)
+                    query_time = time.time() - query_time
+                    logging.debug(f"Processed {datapoint['id']} query for subj ({subj}) obj ({obj}) in time {query_time:.3f}: \n" + query)
                     
                     # run the query and save the response
                     response = network_bridge.send_message(message=query)
@@ -370,6 +446,7 @@ class KGManager():
                         parsed = self.parse_response(subj, obj, response)
                         if len(parsed) > 0:
                             responses.append(parsed)
+                            break
                     # increase hop
                     curr_hop += 1
             
@@ -377,6 +454,8 @@ class KGManager():
             # remove last <SEP>
             if responses.endswith(config.LIST_SEP):
                 responses = responses[:-len(config.LIST_SEP)]
+            if len(responses) == 0:
+                responses = "<NO_PATHS_FOUND>"
 
             # add responses to the dataframe
             datapoint['responses'] = responses
@@ -448,7 +527,15 @@ class KGManager():
             # replace the row in the dataframe
             datapoint = pl.from_dict(datapoint, strict=False)
             data_to_query = data_to_query.update(datapoint, on="id")
-            continue
+            
+            # intermediate save: create a dataframe, append newest result, write to disk
+            pl.DataFrame({"id": column_order}) \
+                .join(
+                    pl.concat([data_to_not_query, data_to_query]), 
+                    on="id", 
+                    how="left") \
+                .write_json(f"{self.args.data_dir}/data_falcon_parsed.json")
+            
         
         
         # concatenate data and data_non_na
@@ -459,7 +546,7 @@ class KGManager():
         data.write_json(f"deleteme_after.json")
         
         # save
-        data.write_json(f"{self.args.data_dir}/data_falcon_parsed.json")
+        data.write_json(f"{self.args.data_dir}/data_falcon_fully_parsed.json")
         
         # print stats
         for split in data.group_by('source_dataset'):

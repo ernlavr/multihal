@@ -16,6 +16,12 @@ def fill_ignore_properties(path):
         data = [d['id'] for d in data]
         return set(data)
     
+def get_refusal_strings():
+    """ Defines a list of strings that indicate a refusal to answer from an LLM.
+    Normally happens for subjective nature questions.
+    """
+    return ["I'm an AI", "I have no comment", "As an AI language model", "I am an", "I do not have", "I don't have", "I am an artificial intelligence", "Nothing happens", "nothing in particular"]
+    
 def fill_all_properties(path):
     with open(path, "r") as f:
         data = json.load(f)
