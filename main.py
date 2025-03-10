@@ -164,7 +164,7 @@ def query_kg(dataset: Any, args: Any) -> None:
     bridge = br.NetworkBridge()
     kg_manager = kgm.KGManager(dataset, args)
     # Query the knowledge graph with a maximum of 3 hops
-    kg_manager.query_kg(dataset, bridge, max_hops=2)
+    kg_manager.query_kg(dataset, bridge, max_hops=3)
     logging.info("Finished querying KGs")
 
 

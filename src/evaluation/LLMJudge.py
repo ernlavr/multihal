@@ -16,9 +16,8 @@ class LLMJudge():
         self.kg_manager = kgm.KGManager(None, args)
         if hf_model is not None:
             utils.print_cuda_stats()
-            self.tokenizer = AutoTokenizer.from_pretrained(hf_model)
             self.model, self.device = self.get_model(hf_model)
-            self.run_inference("Best ways of handling business is by")
+            self.tokenizer = AutoTokenizer.from_pretrained(hf_model)
     
     def get_model(self, model_name, distributed=False) -> tuple[AutoModelForCausalLM, torch.device]:
         # Initialize distributed 
@@ -41,42 +40,71 @@ class LLMJudge():
     
     def get_prompt_triple_relevance(self, question, answer, triple):
         """ Returns the prompt for the LLM to evaluate the relevance of the triple to the question and answer """
-        instructions = f"""
-            <|begin_of_text|><|start_header_id|>system<|end_header_id|>
-            You need to evaluate whether a given Wikidata triple is informative to the given question with respect to the expected answer.
-            Output in YAML format one of three options, "Yes", "No", "Unsure" and indicate your confidence level.
+        messages = [
+            {"role": "system", "content": r"""You need to evaluate whether a given Wikidata triple (subject-predicate-object) answers a given question and supports the given answers.
+            Give me your output in YAML format with of three options, "Yes", "No", "Unsure" and indicate your confidence level.
+            The triples can have multiple hops where the object and subject alternates with predicates seperating them.
             
             Here is an expected format of the input:
             Question: What is the capital of France?
             Answer: Paris
             Triple: (France, capital, Paris)
             
-            Here is an example of the output
+            Here is an expected format of the output:
             Relevance: Yes
             Confidence: 0.9
-            <|eot_id|>
             
-            <|start_header_id|>user<|end_header_id|>
-            Question: {question}
-            Answer: {answer}
-            Triple: ({", ".join(triple)})
-            <|eot_id|>
+            Here is another example of expected input:
+            Question: Is there gravity on the International Space Station?; 
+            Answer: ["Yes, Earth's gravity on the International Space Station is around 90 percent of the gravity on the Earth's surface", 'Yes, there is gravity everywhere in space']; 
+            Triple: (International Space Station, topic's main Wikimedia portal, Portal:International Space Station, Wikimedia portal's main topic, International Space Station)
             
-            <|start_header_id|>assistant<|end_header_id|>
-        """
+            Here is another example of expected output:
+            Relevance: No
+            Confidence: 0.87
+            
+            """},
+            {"role": "user", "content": f"Question: {question}; \nAnswer: {answer}; \nTriple: ({', '.join(triple)})"},
+        ]
         
-        return instructions
+        # instructions = f"""
+        #     <|begin_of_text|><|start_header_id|>system<|end_header_id|>
+        #     You need to evaluate whether a given Wikidata triple (subject-predicate-object) is informative to the given question with respect to the expected answer.
+        #     Output only your answer in YAML format and one of three options, "Yes", "No", "Unsure" and indicate your confidence level.
+        #     The triples can have multiple hops where the object and subject alternates with predicates seperating them.
+            
+        #     Here is an expected format of the input:
+        #     Question: What is the capital of France?
+        #     Answer: Paris
+        #     Triple: (France, capital, Paris)
+            
+        #     Here is an expected format of the output:
+        #     Relevance: Yes
+        #     Confidence: 0.9
+            
+        #     <|eot_id|>
+            
+        #     <|start_header_id|>user<|end_header_id|>
+        #     Question: {question}
+        #     Answer: {answer}
+        #     Triple: ({", ".join(triple)})
+        #     <|eot_id|>
+            
+        #     <|start_header_id|>assistant<|end_header_id|>
+        # """
+        
+        return messages
     
     def run_inference(self, text):
         """ Expects formatted text """
         # Run inference
-        inputs = self.tokenizer(text, return_tensors='pt').input_ids.to(self.device)
+        # inputs = self.tokenizer(text, return_tensors='pt').input_ids.to(self.device)
+        tokenized_chat = self.tokenizer.apply_chat_template(text, tokenize=True, add_generation_prompt=True, return_tensors="pt")
         outputs = self.model.generate(
-            inputs, 
+            tokenized_chat, 
             max_new_tokens=256,
-            do_sample=False,     # No randomness
-            num_beams=5,         # Use beam search for better coherence
-            temperature=0.3,     # Low temperature for precise answers
+            num_beams=5,            # Use beam search for better coherence
+            temperature=0.7,        # Low temperature for precise answers
             repetition_penalty=1.2
         )
 
@@ -95,8 +123,10 @@ class LLMJudge():
         
     def evaluate_triple_relevance(self, data: pl.DataFrame):
         # filter out rows which have no triples
-        _data = data.filter(~data['responses'].is_in(['N/A', ""]))
-        output = {}
+        _data = data.filter(~data['responses'].is_in(['N/A', "", "<NO_PATHS_FOUND>"]))
+        df_mappings = {'id': pl.String, 'source_dataset': pl.String, 'domain': pl.String,'input': pl.String, 'output': pl.String, 'trip': pl.String, 'trip_labels': pl.String, 'relevance': pl.String, 'confidence': float}
+        output = pl.DataFrame(schema=df_mappings)
+        
         relevances = []
         for row in tqdm(_data.iter_rows(named=True)):
             # for each row, get the possible tripples
@@ -107,8 +137,8 @@ class LLMJudge():
                 opt_a = opt_a.split(config.LIST_SEP)
                 a = [a] + opt_a
             trips = row.get('responses').split(config.LIST_SEP)
+            logging.info(f"Processing row {row['id']} with triples (n={len(trips)})")
             
-            output[row['id']] = []
             for trip in trips:
                 if len(trip) == 0: continue
                 # for each triple, decode the identifiers to labels    
@@ -119,9 +149,18 @@ class LLMJudge():
                 result = result.split("<|start_header_id|>assistant<|end_header_id|>")[-1]
                 
                 relevance, confidence = self.extract_relevance_confidence(result)
+                entry = pl.DataFrame({'id': row['id'], 
+                                      'source_dataset': row['source_dataset'], 
+                                      'domain': row['domain'], 
+                                      'input': q, 
+                                      'output': f"{config.LIST_SEP}".join(a), 
+                                      'trip': trip, 
+                                      'trip_labels': f" ".join(labels), 
+                                      'relevance': relevance, 
+                                      'confidence': confidence})
                 
                 # save the output to a dict
-                output[row['id']].append({'relevance': relevance, 'confidence': confidence})
+                output = pl.concat([output, entry])
                 relevances.append(relevance)
                 
         return output, relevances

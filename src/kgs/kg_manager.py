@@ -369,6 +369,7 @@ class KGManager():
                     raise NotImplementedError("DBPedia not implemented yet")
 
                 pairs.append((s, o))
+                pairs.append((o, s)) # reverse the pair
         return pairs
 
     def parse_response(self, subj, obj, response: dict):
@@ -404,10 +405,11 @@ class KGManager():
         return data.filter(
             (pl.col('subjects').str.contains("wikidata.org")) & 
             (pl.col('objects').str.contains("wikidata.org")) &
-            (pl.col('responses') == 'N/A')
+            ((pl.col('responses') == 'N/A') |
+            (pl.col('responses') == '<NO_PATHS_FOUND>'))
         )
 
-    def query_kg(self, data: pl.DataFrame, network_bridge: br.NetworkBridge, max_hops=3):
+    def query_kg(self, data: pl.DataFrame, network_bridge: br.NetworkBridge, max_hops=4, start_hop=4):
         if "responses" not in data.columns:
             data = data.with_columns(
                 responses=pl.lit('N/A')
@@ -432,7 +434,7 @@ class KGManager():
             responses = []
             for subj, obj in pairs:
                 total_queries += 1
-                curr_hop = 1
+                curr_hop = start_hop
                 while curr_hop <= max_hops:
                     # plug in the pair in the query
                     query_time = time.time()
