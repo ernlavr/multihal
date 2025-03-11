@@ -162,7 +162,9 @@ class LLMJudge():
                 # save the output to a dict
                 output = pl.concat([output, entry])
                 relevances.append(relevance)
-                
+            output.write_csv(f"{self.args.data_dir}/llm_judge_results_intermediate.csv")
+        
+        output.write_csv(f"{self.args.data_dir}/llm_judge_results.csv")
         return output, relevances
     
     def evaluate(self, data):
