@@ -409,7 +409,7 @@ class KGManager():
             (pl.col('responses') == '<NO_PATHS_FOUND>'))
         )
 
-    def query_kg(self, data: pl.DataFrame, network_bridge: br.NetworkBridge, max_hops=4, start_hop=4):
+    def query_kg(self, data: pl.DataFrame, network_bridge: br.NetworkBridge, max_hops=4, start_hop=3):
         if "responses" not in data.columns:
             data = data.with_columns(
                 responses=pl.lit('N/A')

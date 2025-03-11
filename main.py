@@ -177,6 +177,7 @@ def evaluate_triples(dataset: Any, args: Any) -> None:
         args (Any): Configuration object containing LLM parameters.
     """
     judge = llmJudge.LLMJudge(args.llm_judge_model, args)
+    # judge.add_labels(dataset)
     outputs, relevances = judge.evaluate_triple_relevance(dataset)
     # Compute unique relevance values and their counts
     relevance_values, relevance_counts = np.unique(relevances, return_counts=True)

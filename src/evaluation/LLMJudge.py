@@ -64,7 +64,7 @@ class LLMJudge():
             Confidence: 0.87
             
             """},
-            {"role": "user", "content": f"Question: {question}; \nAnswer: {answer}; \nTriple: ({', '.join(triple)})"},
+            {"role": "user", "content": f"Question: {question}; \nAnswer: {answer}; \nTriple: ({triple})"},
         ]
         
         # instructions = f"""
@@ -120,6 +120,35 @@ class LLMJudge():
         confidence = float(confidence_match.group(1)) if confidence_match else None
         
         return relevance, confidence
+    
+    def add_labels(self, data: pl.DataFrame):
+        _data = data.filter(~data['responses'].is_in(['N/A', "", "<NO_PATHS_FOUND>"]))
+        # add "trip_labels" column
+        _data = _data.with_columns(
+                    trip_labels=pl.lit('N/A')
+                )
+        
+        for datapoint in tqdm(_data.iter_rows(named=True), total=_data.shape[0]):
+            trips = datapoint.get('responses').split(config.LIST_SEP)
+            logging.info(f"Processing row {datapoint['id']} with triples (n={len(trips)})")
+            
+            labels = []
+            for trip in trips:
+                if len(trip) == 0: continue
+                # for each triple, decode the identifiers to labels    
+                _labels = self.kg_manager.decode_statement_labels(trip.split())
+                _labels = "; ".join(_labels)
+                labels.append(_labels)
+            
+            labels = f"{config.LIST_SEP}".join(labels)
+            datapoint['trip_labels'] = labels
+            _datapoint = pl.from_dict(datapoint, strict=False)
+            _data = _data.update(_datapoint, on="id")
+            _data.write_json(f"{self.args.data_dir}/data_kg_trip_labels.json")
+        pass
+                
+            
+        
         
     def evaluate_triple_relevance(self, data: pl.DataFrame):
         # filter out rows which have no triples
@@ -136,13 +165,15 @@ class LLMJudge():
             if opt_a is not None:
                 opt_a = opt_a.split(config.LIST_SEP)
                 a = [a] + opt_a
-            trips = row.get('responses').split(config.LIST_SEP)
+            # trips = row.get('responses').split(config.LIST_SEP)
+            trips = row.get('trip_labels').split(config.LIST_SEP)
             logging.info(f"Processing row {row['id']} with triples (n={len(trips)})")
             
             for trip in trips:
                 if len(trip) == 0: continue
                 # for each triple, decode the identifiers to labels    
-                labels = self.kg_manager.decode_statement_labels(trip.split())
+                # labels = self.kg_manager.decode_statement_labels(trip.split())
+                labels = trip
                 # run inference on the triples' relevance to the question with respect to the expected answer
                 prompt = self.get_prompt_triple_relevance(q, a, labels)
                 result = self.run_inference(prompt)
