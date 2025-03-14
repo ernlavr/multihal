@@ -267,13 +267,13 @@ class CustomLlama3_8B(DeepEvalBaseLLM):
         # )
 
         model_4bit = AutoModelForCausalLM.from_pretrained(
-            "meta-llama/Llama-3.2-3B-Instruct",
+            "meta-llama/Llama-3.2-1B-Instruct",
             device_map="auto",
             # load_in_4bit=True,
             # quantization_config=quantization_config,
         )
         tokenizer = AutoTokenizer.from_pretrained(
-            "meta-llama/Llama-3.2-3B-Instruct"
+            "meta-llama/Llama-3.2-1B-Instruct"
         )
 
         self.model = model_4bit
@@ -299,7 +299,13 @@ class CustomLlama3_8B(DeepEvalBaseLLM):
             pad_token_id=self.tokenizer.eos_token_id,
         )
         
-        return pipeline(prompt)
+        generation = pipeline(prompt)
+        if len(generation) != 1:
+            logging.info(f"Generated text length: {len(generation)}")
+            logging.info("Returning 0th index")
+            logging.info(generation)
+        output = generation[0]['generated_text'][len(prompt):]
+        return output    
 
     async def a_generate(self, prompt: str) -> str:
         return self.generate(prompt)
