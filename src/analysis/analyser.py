@@ -152,6 +152,9 @@ class DatasetAnalyser():
 
                 # remove duplicates
                 updated_value = updated_value.split(config.LIST_SEP)
+                
+                if len(updated_value) > 1:
+                    pass
                 updated_value = config.LIST_SEP.join(list(set(updated_value)))
 
                 # Update the target index value

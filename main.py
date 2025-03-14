@@ -27,6 +27,7 @@ import src.analysis.sentence_embedder as se
 import src.kgs.kg_manager as kgm
 import src.network.udp_manager as br
 import src.evaluation.LLMJudge as llmJudge
+import src.evaluation.DeepEval as deJudge
 
 
 def generate_sentence_embeddings(dataset: pl.DataFrame, args: Any) -> Tuple[np.ndarray, anlyz.DatasetAnalyser]:
@@ -176,7 +177,15 @@ def evaluate_triples(dataset: Any, args: Any) -> None:
         dataset (Any): The dataset containing triples.
         args (Any): Configuration object containing LLM parameters.
     """
-    judge = llmJudge.LLMJudge(args.llm_judge_model, args)
+    if args.llm_judge_method == 'proprietary':
+        judge = llmJudge.LLMJudge(args.llm_judge_model, args)
+    elif args.llm_judge_method == 'deepeval':
+        judge = deJudge.DeepEvalJudge(args.llm_judge_model, dataset, args)
+    else:
+        raise ValueError(f"Unknown LLM judge method: {args.llm_judge_method}")
+    
+    judge.evaluate_trip_relevance(dataset)
+    
     # judge.add_labels(dataset)
     outputs, relevances = judge.evaluate_triple_relevance(dataset)
     # Compute unique relevance values and their counts
@@ -216,7 +225,7 @@ def main() -> None:
     logging.info("Starting data manager")
     data_manager = dm.DataManager(args)
     analyzer = None
-    dataset = data_manager.get_dataset()
+    dataset = data_manager.get_dataset(args)
     
     if args.continue_from_previous_state:
         previous_state_continuations(dataset, args)

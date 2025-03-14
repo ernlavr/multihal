@@ -67,6 +67,8 @@ class KGManager():
             if entity.startswith('Q') and len(entity) < 14:
                 query = qb.get_label_of_entity(entity)
                 response = self.bridge.send_message(message=query)
+                if len(response['results']['bindings']) == 0:
+                    continue
                 labels.append(response['results']['bindings'][0]['label']['value'])
             elif entity.startswith('P'):
                 property = self.all_properties.get(entity, None)
@@ -273,13 +275,16 @@ class KGManager():
 
         # Process queryable objects
         outputs = [datapoint['output']]
+        if config.LIST_SEP in outputs:
+            outputs = outputs.split(config.LIST_SEP)
+            
         if datapoint['optional_output'] is not None:
             outputs.extend(datapoint['optional_output'].split(config.LIST_SEP))
         
         outputs = list(set(outputs))  # Remove duplicates
-        if len(outputs) > 3:
-            outputs = outputs[:3]
-            logging.info(f"Truncated outputs to 3 for datapoint: {datapoint['id']}")
+        if len(outputs) > 5:
+            outputs = outputs[:5]
+            logging.info(f"Truncated outputs to 5 for datapoint: {datapoint['id']}")
         
         queryable_objects = []
         for output in outputs:
@@ -352,6 +357,7 @@ class KGManager():
 
         # Finally get the pairs
         pairs = []
+        s_equal_o = 0
         for s in subjects:
             if kg_name not in s:
                 continue
@@ -367,10 +373,18 @@ class KGManager():
 
                 if 'dbpedia' in kg_name: # TODO cross-check this
                     raise NotImplementedError("DBPedia not implemented yet")
+                
+                # Prevent circular paths
+                if s == o:
+                    s_equal_o += 1
+                    continue
 
                 pairs.append((s, o))
                 pairs.append((o, s)) # reverse the pair
-        return pairs
+        
+        logging.info(f"Number of pairs: {len(pairs)}")
+        logging.info(f"Number of pairs where subject equals object: {s_equal_o}")
+        return pairs, s_equal_o
 
     def parse_response(self, subj, obj, response: dict):
         """ Parse the response from the network bridge """
@@ -414,26 +428,29 @@ class KGManager():
             data = data.with_columns(
                 responses=pl.lit('N/A')
             )
+        start_time = time.time()
         
         queryable_datapoints = self.get_queryable_datapoints(data)
         
         progress_bar = tqdm(queryable_datapoints.iter_rows(named=True), total=queryable_datapoints.shape[0])
         # datapoint add column responses
         
-        total_queries = 0
-
+        total_number_of_pairs = 0
+        total_number_of_circular = 0
         for datapoint in progress_bar:
             logging.info(f"Processing Datapoint: {datapoint['id']}")
             progress_bar.set_description(f"Querying Wikidata")
 
             # pair-wise path search between subject-object entities
-            pairs = self._get_kg_so_pairs(datapoint)
+            pairs, number_of_circular = self._get_kg_so_pairs(datapoint)            
             if not pairs:
                 continue
+            
+            total_number_of_circular += number_of_circular
+            total_number_of_pairs += len(pairs)
 
             responses = []
             for subj, obj in pairs:
-                total_queries += 1
                 curr_hop = start_hop
                 while curr_hop <= max_hops:
                     # plug in the pair in the query
@@ -464,7 +481,14 @@ class KGManager():
             _datapoint = pl.from_dict(datapoint, strict=False)
             data = data.update(_datapoint, on="id")
             data.write_json(f"{self.args.data_dir}/data_subj_obj_parsed_queried_wd.json")
-        logging.info(f"Total number of queries: {total_queries}")
+
+        end_time = time.time()
+        logging.info(f"Total time taken: {(end_time - start_time):.2f}")
+        logging.info("Total number of pairs: {total_number_of_pairs}")
+        logging.info("Total number of circular pairs: {total_number_of_circular}")
+        logging.info(f"Max hops: {max_hops}")
+        logging.info(f"Number of queryable datapoints: {queryable_datapoints.shape[0]}")
+        
         return data
             
             

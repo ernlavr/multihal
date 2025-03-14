@@ -137,6 +137,7 @@ class GlobalConfig(metaclass=singl.Singleton):
             evaluate=False,                  # Evaluate the dataset triples
             remove_refused_answers=False,
             api_mode='long',                # string, either 'long' or 'short' for Falcon2.0 mode
+            llm_judge_method=None,  # string, either 'proprietary' or 'deepeval'
             
             load_premade_dataset=None,      # string, path to a premade dataset
             continue_from_previous_state=None, # dict {RUN_ID: str, dataset: str, functions: list}

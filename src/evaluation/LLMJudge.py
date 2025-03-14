@@ -52,7 +52,7 @@ class LLMJudge():
             
             Here is an expected format of the output:
             Relevance: Yes
-            Confidence: 0.9
+            Confidence: 0.9x§
             
             Here is another example of expected input:
             Question: Is there gravity on the International Space Station?; 
