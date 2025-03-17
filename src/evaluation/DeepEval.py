@@ -8,9 +8,12 @@ import os
 import polars as pl
 from tqdm import tqdm
 import src.utils.config as config
+import src.evaluation.JudgeBaseClass as jbc
+from src.evaluation.JudgeBaseClass import JudgeEvalResult
 import src.kgs.kg_manager as kgm
 import re
 import deepeval
+import src.utils.decorators as decorators
 
 import transformers
 import torch
@@ -19,26 +22,31 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from deepeval.models import DeepEvalBaseLLM
 
 
-class DeepEvalJudge():
+class DeepEvalJudge(jbc.JudgeBaseClass):
     def __init__(self, hf_model, dataset, args):
         self.initialize_deepeval()
         self.args = args
         
     def initialize_deepeval(self):
-        deepeval.login_with_confident_api_key(os.environ['DEEP_EVAL'])
+        # deepeval.login_with_confident_api_key(os.environ['DEEP_EVAL'])
+        pass
     
     def get_llm_test_case(self, data):
         outputs = []
         test_cases = []
         trip_labels = []
+        trip_codes = []
         _RE_COMBINE_WHITESPACE = re.compile(r"\s+") # any number of whitespace to 1 whitespace
 
         # filter out circular paths
         for label, trip in zip(data['trip_labels'].split(config.LIST_SEP), data['responses'].split(config.LIST_SEP)):
-            if len(trip) == 0: continue
+            if len(trip) == 0: 
+                continue
+            
             trip_split = _RE_COMBINE_WHITESPACE.sub(" ", trip).strip().split()
-            if trip_split[0] != trip_split[-1]: trip_labels.append(label)
-        trip_labels = list(set(trip_labels))
+            if trip_split[0] != trip_split[-1] and label not in trip_labels: 
+                trip_labels.append(label)
+                trip_codes.append(" ".join(trip_split))
         
         # Create test cases
         for trip in trip_labels:
@@ -48,7 +56,7 @@ class DeepEvalJudge():
                 retrieval_context=[trip],
             )
             test_cases.append(test_case)
-        return test_cases
+        return test_cases, trip_labels, trip_codes
     
     def get_test_case_metric(self):
         return deepeval.metrics.GEval(
@@ -60,19 +68,59 @@ class DeepEvalJudge():
             evaluation_params=[deepeval.test_case.LLMTestCaseParams.INPUT, 
                                deepeval.test_case.LLMTestCaseParams.ACTUAL_OUTPUT,
                                deepeval.test_case.LLMTestCaseParams.RETRIEVAL_CONTEXT],
-            model=CustomLlama3_8B()
+            evaluation_steps=[
+                "Ensure the retrieval context contains the subject or object relevant to the question entity.",
+                "Verify the retrieval context has a matching predicate with the question intent.",
+                "Confirm the retrieval context provides a path for answering the question."
+            ],
+            model=CustomLlama3_8B(self.args.llm_judge_model)
         )
     
+    @decorators.log_execution_time
     def evaluate_trip_relevance(self, data: pl.DataFrame):
         tmp = data
         metric = self.get_test_case_metric()
+        output = self.get_results_df()
+        output_path = f"{self.args.data_dir}/llm_judge_{self.args.llm_judge_model.replace('/', '-')}_int.json"
+        success_counter = 0
+        
         for row in tmp.iter_rows(named=True):
-            test_case = self.get_llm_test_case(row)
+            test_case, trip_labels, trip_codes = self.get_llm_test_case(row)
             
             results = deepeval.evaluate(
                 test_cases=test_case,
                 metrics=[metric])
-            pass
+            
+            if not results.test_results:
+                logging.info(f"No results for row {row['id']}")
+                continue
+            
+            for test_case in results.test_results:
+                for metric_result in test_case.metrics_data:
+    
+                    success = "pass" if metric_result.success else "fail"
+                    score = metric_result.score
+                    
+                    entry = JudgeEvalResult(
+                        id=row['id'],
+                        source_dataset=row['source_dataset'],
+                        task=row['task'],
+                        domain=row['domain'],
+                        input=row['input'],
+                        output=row['output'],
+                        responses=trip_codes,
+                        trip_labels=trip_labels,
+                        judged_by=self.args.llm_judge_model,
+                        judged_label=success,
+                        judged_score=score
+                    )
+                    output = self.add_result(entry, output)
+                    output.write_json(output_path)
+        
+        logging.info(f"Pass rate: {success_counter}/{len(tmp)}")
+        output.write_json(output_path)
+        return output
+
     
     def get_model(self, model_name, distributed=False) -> tuple[AutoModelForCausalLM, torch.device]:
         # Initialize distributed 
@@ -245,6 +293,7 @@ class DeepEvalJudge():
                                       'relevance': relevance, 
                                       'confidence': confidence})
                 
+                
                 # save the output to a dict
                 output = pl.concat([output, entry])
                 relevances.append(relevance)
@@ -258,22 +307,23 @@ class DeepEvalJudge():
     
     
 class CustomLlama3_8B(DeepEvalBaseLLM):
-    def __init__(self):
+    def __init__(self, model_name):
         # quantization_config = BitsAndBytesConfig(
         #     load_in_4bit=True,
         #     bnb_4bit_compute_dtype=torch.float16,
         #     bnb_4bit_quant_type="nf4",
         #     bnb_4bit_use_double_quant=True,
         # )
+        self.model_name = model_name
 
         model_4bit = AutoModelForCausalLM.from_pretrained(
-            "meta-llama/Llama-3.2-1B-Instruct",
+            self.model_name,
             device_map="auto",
             # load_in_4bit=True,
             # quantization_config=quantization_config,
         )
         tokenizer = AutoTokenizer.from_pretrained(
-            "meta-llama/Llama-3.2-1B-Instruct"
+            self.model_name
         )
 
         self.model = model_4bit
@@ -289,12 +339,14 @@ class CustomLlama3_8B(DeepEvalBaseLLM):
             "text-generation",
             model=model,
             tokenizer=self.tokenizer,
-            use_cache=True,
+            max_new_tokens=256,
             device_map="auto",
-            max_new_tokens=512,
+            temperature=0.3,
+            top_p=0.9,
+            top_k=50,
+            repetition_penalty=1.1,
             do_sample=True,
-            top_k=5,
-            num_return_sequences=1,
+            return_full_text=True,
             eos_token_id=self.tokenizer.eos_token_id,
             pad_token_id=self.tokenizer.eos_token_id,
         )
@@ -305,10 +357,15 @@ class CustomLlama3_8B(DeepEvalBaseLLM):
             logging.info("Returning 0th index")
             logging.info(generation)
         output = generation[0]['generated_text'][len(prompt):]
-        return output    
+        
+        print("-----------------")
+        print("Start of output")
+        print(output)
+        print("end of output")
+        return output   
 
     async def a_generate(self, prompt: str) -> str:
         return self.generate(prompt)
 
     def get_model_name(self):
-        return "Llama-3 8B"
+        return self.model_name
