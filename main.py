@@ -184,6 +184,7 @@ def evaluate_triples(dataset: Any, args: Any) -> None:
     else:
         raise ValueError(f"Unknown LLM judge method: {args.llm_judge_method}")
     
+    _ds = judge.choose_best_triples(dataset)
     judge.evaluate_trip_relevance(dataset)
     
     # judge.add_labels(dataset)
