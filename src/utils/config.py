@@ -123,6 +123,7 @@ class GlobalConfig(metaclass=singl.Singleton):
             data_dir="data",
             datasets="all", # all, shroom2024, shroom2025, halueval, tqa_gen, felm, halubench, defan, simpleqa
             save_full_data=False,
+            subset_sample_size=None,
             
             # Control
             debug_mode=True,                # Debug mode
@@ -135,12 +136,15 @@ class GlobalConfig(metaclass=singl.Singleton):
             parse_text_to_ents=False,
             run_qa_kgs=False,
             evaluate=False,                  # Evaluate the dataset triples
+            test_knowledge_injection=False,  # Test the knowledge injection
             remove_refused_answers=False,
             api_mode='long',                # string, either 'long' or 'short' for Falcon2.0 mode
             llm_judge_method=None,  # string, either 'proprietary' or 'deepeval'
+            knowledge_inj_task=None,        # string, either 'grag', 'rag' or 'qa'
             
             load_premade_dataset=None,      # string, path to a premade dataset
             continue_from_previous_state=None, # dict {RUN_ID: str, dataset: str, functions: list}
+            load_score_dataset=None,        # string, path to a dataset with scores for KI injection
 
             # clustering
             clustering_algo=None,           # string, either 'kmeans' or 'dbscan'
@@ -150,6 +154,7 @@ class GlobalConfig(metaclass=singl.Singleton):
             # Model
             sentence_embedder="sentence-transformers/sentence-t5-base", # HuggingFace or local path
             llm_judge_model=None,                                       # model definition for LLM-as-judge
+            llm_temp=0.3,                                               # temperature for LLM-as-judge
             )
 
     def load_yaml(self, config_args: dict) -> dict:

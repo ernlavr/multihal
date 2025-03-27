@@ -1,0 +1,91 @@
+import evaluate
+import polars as pl
+import src.network.LlmApi as llmApi
+import src.utils.prompts as prompts
+import numpy as np
+import logging
+from tqdm import tqdm
+
+class KnowledgeInjectionEval():
+    def __init__(self, args):
+        self.args = args
+        self.model_name = args.model_name
+        self.bert_score = evaluate.load("bertscore")
+    
+    def _get_task_prompt(self, task):
+        if task == 'grag':
+            return prompts.get_Graph_prompt
+        elif task == 'rag':
+            return prompts.get_RAG_prompt
+        elif task == 'qa':
+            return prompts.get_standard_QA_prompt
+    
+    def _get_eval_dataset(self, data):
+        """ Currently the score dataset and full dataset is seperate. We're missing context
+            and some other useful information so merge it back in. This is a bit hacky and should
+            be fixed at the core.
+        """
+        score_data = pl.read_json(self.args.load_score_dataset)
+        filtered_data = data.filter(pl.col("id").is_in(score_data['id']))
+        
+        # remove overlapping columns
+        cols_to_drop = score_data.columns
+        cols_to_drop.remove('id')
+        
+        filtered_data = filtered_data.drop(cols_to_drop, strict=False)
+        
+        # add missing coluns from filtered_data into score_data based on ID
+        score_data = score_data.join(filtered_data, on='id', maintain_order='left')
+        return score_data
+        
+    def _merge_and_save_results(self, row, data, task):
+        data = pl.concat([data, pl.DataFrame(row, schema=data.schema)])
+        data.write_json(f"{self.args.data_dir}/llm_eval_{self.model_name.replace('/', '-')}_{task}.json")
+        return data
+        
+    
+    def run_eval(self, data: pl.DataFrame, task="grag"):
+        # fetch the data, extend it with another row for model prediction and score
+        data = self._get_eval_dataset(data)
+        data = data.with_columns(
+            model_response=pl.Series(["N/A" for _ in range(len(data))]),
+            responding_model=pl.Series([self.model_name for _ in range(len(data))]),
+            score=pl.Series([np.inf for _ in range(len(data))])
+        )
+        prompt_func = self._get_task_prompt(task)
+        
+        output = pl.DataFrame(schema=data.schema)
+        
+        if task == 'rag':
+            data = data.filter((
+                    pl.col("context").is_not_null() &
+                    ~pl.col("context").str.contains('https://'),
+                    pl.col("context").str.len_chars() > 20,
+                )).unique('id')
+            
+            
+        
+        for row in tqdm(data.iter_rows(named=True), total=len(data)):
+            question = row['input']
+            context = None
+            answer = row['output']
+            if task == 'rag':
+                context = row['context']
+            if task == 'grag':
+                context = row['trip_labels']
+            prompt = prompt_func(context, question)
+            
+            api_response = llmApi.post_api_request(self.model_name, prompt, 0.5, max_tokens=1024)
+            if api_response is None:
+                logging.error(f"Failed to get API response for row {row['id']}")
+                row['model_response'] = "<API_ERROR>"
+                row['score'] = np.inf
+                output = self._merge_and_save_results(row, output, task)
+                continue
+                            
+            model_response = api_response['choices'][0]['message']['content']
+            row['model_response'] = model_response
+            
+            # add row to output
+            output = self._merge_and_save_results(row, output, task)
+        return data

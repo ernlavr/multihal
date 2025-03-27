@@ -107,7 +107,6 @@ class DataManager(metaclass=sing.Singleton):
         data = data.filter(~mask)
         
         logging.info(f"Removed refused LLM answers: {len(mask.filter(mask == True))} refusal answers; New length {len(data)}")
-
         return data
             
     

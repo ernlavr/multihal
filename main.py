@@ -28,6 +28,8 @@ import src.kgs.kg_manager as kgm
 import src.network.udp_manager as br
 import src.evaluation.LLMJudge as llmJudge
 import src.evaluation.DeepEval as deJudge
+import src.evaluation.Api_judge as apiJudge
+import src.evaluation.KnowledgeInjection as ki
 
 
 def generate_sentence_embeddings(dataset: pl.DataFrame, args: Any) -> Tuple[np.ndarray, anlyz.DatasetAnalyser]:
@@ -181,18 +183,20 @@ def evaluate_triples(dataset: Any, args: Any) -> None:
         judge = llmJudge.LLMJudge(args.llm_judge_model, args)
     elif args.llm_judge_method == 'deepeval':
         judge = deJudge.DeepEvalJudge(args.llm_judge_model, dataset, args)
+    elif args.llm_judge_method == 'api':
+        judge = apiJudge.API_Judge(args.llm_judge_model, args)
     else:
         raise ValueError(f"Unknown LLM judge method: {args.llm_judge_method}")
     
-    _ds = judge.choose_best_triples(dataset)
-    judge.evaluate_trip_relevance(dataset)
+    # _ds = judge.choose_best_triples(dataset)
+    judge.evaluate_triple_relevance(dataset)
     
-    # judge.add_labels(dataset)
-    outputs, relevances = judge.evaluate_triple_relevance(dataset)
-    # Compute unique relevance values and their counts
-    relevance_values, relevance_counts = np.unique(relevances, return_counts=True)
-    fig.plot_pie({"Relevance count": (relevance_values, relevance_counts)},
-                 "LLM as judge relevance counts;")
+    # # judge.add_labels(dataset)
+    # outputs, relevances = judge.evaluate_triple_relevance(dataset)
+    # # Compute unique relevance values and their counts
+    # relevance_values, relevance_counts = np.unique(relevances, return_counts=True)
+    # fig.plot_pie({"Relevance count": (relevance_values, relevance_counts)},
+    #              "LLM as judge relevance counts;")
 
 def previous_state_continuations(dataset: pl.DataFrame, args) -> pl.DataFrame:
     # Load the dataset to continue from
@@ -266,6 +270,10 @@ def main() -> None:
     # Evaluate triples using the LLM judge if enabled
     if args.evaluate:
         evaluate_triples(dataset, args)
+    
+    if args.test_knowledge_injection:
+        ki_eval = ki.KnowledgeInjectionEval(args)
+        ki_eval.run_eval(dataset, args.knowledge_inj_task)
 
 
 if __name__ == '__main__':

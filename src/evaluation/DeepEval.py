@@ -89,7 +89,11 @@ class DeepEvalJudge(jbc.JudgeBaseClass):
             
             results = deepeval.evaluate(
                 test_cases=test_case,
-                metrics=[metric])
+                metrics=[metric],
+                verbose_mode=False,
+                print_results=False,
+                ignore_errors=True,
+            )
             
             if not results.test_results:
                 logging.info(f"No results for row {row['id']}")

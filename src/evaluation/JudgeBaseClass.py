@@ -16,7 +16,7 @@ class JudgeEvalResult:
     trip_labels: str        # wikidata path labels
     judged_by: str          # model name
     judged_label: str       # yes, no, unsure
-    judged_score: float     # 0-1
+    judged_score: pl.Int32     # 0-1
 
 
 class JudgeBaseClass(ABC):
@@ -28,7 +28,7 @@ class JudgeBaseClass(ABC):
         return output
     
     def add_result(self, result: JudgeEvalResult, df: pl.DataFrame) -> pl.DataFrame:
-        result_df = pl.from_dict(result.__dict__)
+        result_df = pl.from_dict(result.__dict__, schema=JudgeEvalResult.__annotations__)
         return pl.concat([df, result_df])
     
     def filter_circular_trips(self, data: pl.DataFrame):
@@ -51,8 +51,14 @@ class JudgeBaseClass(ABC):
     def get_prompt_triple_relevance(self, question, answer, triple):
         """ Returns the prompt for the LLM to evaluate the relevance of the triple to the question and answer """
         messages = [
-            {"role": "system", "content": r"""Rate the given Wikidata Knowledge Graph triple on how informative and relevant it is with respect to the given answer and question.
-            Give me your output in YAML format with of a given score of relevance from 0-1.
+            {"role": "system", "content": r"""Score the given Wikidata Knowledge Graph triple on how informative and relevant it is with respect to the given answer and question.
+            Give me your output in YAML format with a given score in Likert scale from 1 to 5.
+            1 - Very poor. Completley unrelated triple 
+            2 - Poor. Syntactic overlap may exist between the triplet and question/answer but semantics are different
+            3 - Normal. Syntactic overlap touching upon some semantics. Could be usable as a starting point for information support.
+            4 - Good. Implicitly supports the answer given the question
+            5 - Excellent. Directly addresses the question.
+            
             The triples can have multiple hops where the object and subject alternates with predicates seperating them.
             Each triple is contained within parenthesis and whole triples are seperated by a semicolon.
             
@@ -61,26 +67,19 @@ class JudgeBaseClass(ABC):
             Answer: Paris
             Triples: (France, capital, Paris);
             
-            Here is an expected format of the output:
-            ```yml
-            Triple: France, capital, Paris
-            Score: 0.9
-            ```
-            
+            Your output needs to be only the score, no explanation or justification is needed. Example:
+            Score: 5
             """},
             {"role": "user", "content": f"Question: {question}; \nAnswer: {answer}; \nTriple: ({triple})"},
         ]
         return messages
     
-    def get_prompt_top_triples(self, question, answer, triples):
+    def get_prompt_top_triples(self, question, answer, triples, num_triples=10):
         """ Returns the prompt for the LLM to evaluate the relevance of the triple to the question and answer """
         triples = [f"({triple})" for triple in triples]
         triples = "; ".join(triples)
         messages = [
-            {"role": "system", "content": r"""From the given Wikidata Knowledge Graphs triples, you need to select the top 5 most relevant triples that are informative and relevant with respectto the given answer and question.
-            If there are more than 5 triples, then simply return them.
-             
-            Give me your output in YAML format with of a given score of relevance from 0-1.
+            {"role": "system", "content": f"""From the given Wikidata Knowledge Graphs triples, you need to select the Top {num_triples} most relevant triples that are informative and relevant with respect to the given answer and question.
             The triples can have multiple hops where the object and subject alternates with predicates seperating them.
             Each triple is contained within parenthesis and whole triples are seperated by a semicolon.
             
@@ -92,14 +91,12 @@ class JudgeBaseClass(ABC):
             Here is an expected format of the output:
             ```yml
             Triple: France, capital, Paris
-            Score: 0.9
             Triple: Microsoft, founder, Bill Gates
-            Score: 0.05
             ```
             
             """},
-            {"role": "user", "content": f"Question: {question}; \nAnswer: {answer}; \nTriple: ({triples})"},
-        ]
+            {"role": "user", "content": f"Question: {question}; \nAnswer: {answer}; \nTriples: {triples}"},
+        ]    
         return messages
     
     def split_unprocessed_ents(self, data: pl.DataFrame):
