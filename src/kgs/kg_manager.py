@@ -183,20 +183,28 @@ class KGManager():
         
         if 'wiki/' in wikipedia and len(wikidatas) == 0:
             logging.error(f"No wikidata found for {wikipedia}. Something went wrong?. Debug: {url}")
-            logging.error("Attempting again with capitalized first letters")
             wid_split = wikipedia_id.split('_')
-            wid_cap = "_".join([i.capitalize() for i in wid_split])
             wid_first_cap = wid_split[0].capitalize() + "_" + "_".join(wid_split[1:])
+            wid_cap = "_".join([i.capitalize() for i in wid_split])
             wid_upper = "_".join([i.upper() for i in wid_split])
             
-            capitalized = self.get_wikidata_from_wikipedia(wid_cap, attempts=1)
-            if capitalized is None or len(capitalized): return capitalized
-            
+            logging.error("Attempting again with first cap")
             first_cap = self.get_wikidata_from_wikipedia(wid_first_cap, attempts=1)
-            if first_cap is None or len(first_cap): return first_cap
+            if first_cap is None or len(first_cap): 
+                logging.info(f"Got with first cap: {wid_first_cap}")
+                return first_cap
             
+            logging.error("Attempting again with all first-caps letters")
+            capitalized = self.get_wikidata_from_wikipedia(wid_cap, attempts=1)
+            if capitalized is None or len(capitalized): 
+                logging.info(f"Got with capitalized: {wid_cap}")
+                return capitalized
+            
+            logging.error("Attempting again with all-caps")
             upper = self.get_wikidata_from_wikipedia(wid_upper, attempts=1)
-            if upper is None or len(upper): return upper
+            if upper is None or len(upper): 
+                logging.info(f"Got with all caps: {wid_upper}")
+                return upper
             
         return wikidatas
             

@@ -19,15 +19,15 @@ class LLMJudge(jbc.JudgeBaseClass):
         self.model_name = model_name
         if model_name is not None:
             utils.print_cuda_stats()
-            self.pipeline, self.tokenizer, self.device = self.get_pipeline(model_name)
+            self.model, self.tokenizer = self.get_pipeline(model_name)
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
     
     def get_pipeline(self, model_name) -> tuple[AutoModelForCausalLM, torch.device]:
         # Initialize distributed 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        torch.cuda.empty_cache()
         tokenizer = AutoTokenizer.from_pretrained(model_name)
-        
-        
+        model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto")
+                
         pipeline = transformers.pipeline(
             "text-generation",
             model=model_name,
@@ -83,16 +83,17 @@ class LLMJudge(jbc.JudgeBaseClass):
 
     
     def choose_best_triples(self, data: pl.DataFrame):
+        logging.info("Running choose best trips")
         unprocessed_ents, processed_ents = self.split_unprocessed_ents(data)
         output = self.get_results_df()
+        output_path = f"{self.args.data_dir}/llm_judge_results_{self.model_name.replace('/', '-')}"
         
-        for row in tqdm(unprocessed_ents.iter_rows(named=True)):
+        for row in tqdm(unprocessed_ents.iter_rows(named=True), total=len(unprocessed_ents)):
             # for each row, get the possible tripples
             q = row['input']
             a = row['output']
             trips = row.get('responses').split(config.LIST_SEP)
             trips, trip_labels = self.filter_circular_trips(row)
-            
             
             # run inference on the triples' relevance to the question with respect to the expected answer
             prompt = self.get_prompt_top_triples(q, a, trip_labels)
@@ -117,10 +118,10 @@ class LLMJudge(jbc.JudgeBaseClass):
                 judged_score=score
             )
             output = self.add_result(entry, output)
-            output.write_csv(f"{self.args.data_dir}/llm_judge_results_{self.model_name.replace('/', '-')}_top_trips_int.csv")
+            output.write_json(f"{output_path}_top_trips_int.json")
         
         logging.info(f"Processed entities: {len(unprocessed_ents)}/{len(data)}")
-        output.write_csv(f"{self.args.data_dir}/llm_judge_results_{self.model_name}_top_trips.csv")
+        output.write_json(f"{output_path}_top_trips.json")
         return output
         
     def evaluate_triple_relevance(self, data: pl.DataFrame):

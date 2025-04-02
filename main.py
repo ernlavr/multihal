@@ -27,10 +27,13 @@ import src.analysis.sentence_embedder as se
 import src.kgs.kg_manager as kgm
 import src.network.udp_manager as br
 import src.evaluation.LLMJudge as llmJudge
-import src.evaluation.DeepEval as deJudge
+
 import src.evaluation.Api_judge as apiJudge
 import src.evaluation.KnowledgeInjection as ki
 import src.utils.constants as const
+
+# import src.evaluation.DeepEval as deJudge
+
 
 
 def generate_sentence_embeddings(dataset: pl.DataFrame, args: Any) -> Tuple[np.ndarray, anlyz.DatasetAnalyser]:
@@ -246,6 +249,10 @@ def main() -> None:
         previous_state_continuations(dataset, args)
         return
     
+    # Subsample the dataset if a sample size is provided
+    if args.subset_sample_size is not None:
+        dataset = subsample_data(data_manager, dataset, args)
+    
     if args.remove_refused_answers:
         dataset = data_manager.remove_refused_answers(dataset)
         
@@ -256,10 +263,6 @@ def main() -> None:
     # Remove duplicate entries if enabled
     if args.remove_duplicates:
         dataset = remove_duplicates(args, dataset, analyzer)
-    
-    # Subsample the dataset if a sample size is provided
-    if args.subset_sample_size is not None:
-        dataset = subsample_data(data_manager, dataset, args)
 
     # Run clustering analysis if enabled
     if args.run_clustering:
