@@ -30,6 +30,7 @@ import src.evaluation.LLMJudge as llmJudge
 import src.evaluation.DeepEval as deJudge
 import src.evaluation.Api_judge as apiJudge
 import src.evaluation.KnowledgeInjection as ki
+import src.utils.constants as const
 
 
 def generate_sentence_embeddings(dataset: pl.DataFrame, args: Any) -> Tuple[np.ndarray, anlyz.DatasetAnalyser]:
@@ -139,6 +140,11 @@ def generate_analysis_figures(dataset: pl.DataFrame, args: Any) -> None:
     analyzer = anlyz.DatasetAnalyser(None, None)
     domain_stats = analyzer.get_list_of_domains_and_counts(dataset)
     logging.info(pprint.pformat(domain_stats))
+    number_of_dp_with_wiki = analyzer.get_number_of_dp_with_wiki_in_context(dataset)
+    if len(number_of_dp_with_wiki) > 0:
+        ans_types = number_of_dp_with_wiki['answer_type'].value_counts()
+        ans_types = list(zip(ans_types['answer_type'].to_list(), ans_types['count'].to_list()))
+        logging.info(f"Number of datapoints with wiki against ans type: {ans_types}")
 
 
 def process_kg(dataset: Any, args: Any) -> Any:
@@ -167,7 +173,7 @@ def query_kg(dataset: Any, args: Any) -> None:
     bridge = br.NetworkBridge()
     kg_manager = kgm.KGManager(dataset, args)
     # Query the knowledge graph with a maximum of 3 hops
-    kg_manager.query_kg(dataset, bridge, max_hops=3)
+    kg_manager.query_kg(dataset, bridge, max_hops=2)
     logging.info("Finished querying KGs")
 
 
@@ -231,6 +237,10 @@ def main() -> None:
     data_manager = dm.DataManager(args)
     analyzer = None
     dataset = data_manager.get_dataset(args)
+    logging.info(f"Dataset length: {dataset.shape[0]}")
+    
+    # DEBUG: get only datapoints with answer_type == "date"
+    # dataset = dataset.filter(pl.col("answer_type").is_in([const.ANS_TYPE_DATE, const.ANS_TYPE_NUMBER]))
     
     if args.continue_from_previous_state:
         previous_state_continuations(dataset, args)
@@ -257,7 +267,7 @@ def main() -> None:
 
     # Generate analysis figures if enabled
     if args.gen_anlyz_figs:
-        generate_analysis_figures(data_manager, args)
+        generate_analysis_figures(dataset, args)
 
     # Process knowledge graphs from text entities if enabled
     if args.parse_text_to_ents:

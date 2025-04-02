@@ -122,9 +122,11 @@ def _load_defan() -> datasets.DatasetDict:
         # Load and process file
         data = datasets.load_dataset('csv', data_files=file)['train']
         domain = os.path.basename(file).split('_')[2]
+        answer_types = data['type']
         data = data.add_column('domain', [domain] * len(data)) \
                   .add_column('id', range(len(data))) \
-                  .add_column('task', ['qa'] * len(data))
+                  .add_column('task', ['qa'] * len(data)) \
+                  .add_column('answer_type', data['type'])
         
         # Create val and paraphrased dictionaries
         val = {k: [] for k in data.column_names}
@@ -176,6 +178,7 @@ def _load_simpleQa():
     data['val'] = data['val'].add_column('domain', [i['topic'] for i in metadata])
     sep = config.LIST_SEP
     data['val'] = data['val'].add_column('context', [sep.join(i['urls']) for i in metadata])
+    data['val'] = data['val'].add_column('answer_type', [i['answer_type'] for i in metadata])
 
     return data
 

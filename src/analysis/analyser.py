@@ -371,3 +371,7 @@ class DatasetAnalyser():
         domain, counts = vals['domain'].to_list(), vals['count'].to_list()
         output = list(zip(domain, counts))
         return output
+    
+    def get_number_of_dp_with_wiki_in_context(self, data: pl.DataFrame):
+        """ Returns the number of datapoints with wiki in context """
+        return data.filter(pl.col('context').str.contains("wikipedia"))

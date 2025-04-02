@@ -11,9 +11,12 @@ def plot_ds_stats(df: pl.DataFrame):
     dp_per_dataset = df.group_by('source_dataset').count().sort('source_dataset')
     dp_per_domain = df.group_by('domain').count().sort('domain')
     dp_per_task = df.group_by('task').count().sort('task')
+    dp_per_answer_type = df.group_by('answer_type').count().sort('answer_type')
+    
     # datapoints per context where context isnt null
     dp_with_context = df['context'].filter(df['context'].is_not_null()).count()
 
+    draw_pie_chart(dp_per_answer_type, 'answer_type', 'answer_types', number_of_dp)
     draw_pie_chart(dp_per_dataset, 'source_dataset', 'source_datasets', number_of_dp)
     draw_pie_chart(dp_per_domain, 'domain', 'domains', number_of_dp)
     draw_pie_chart(dp_per_task, 'task', 'tasks', number_of_dp)

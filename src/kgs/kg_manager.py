@@ -8,6 +8,7 @@ import src.utils.helpers as uti
 import src.utils.logger as log
 import src.utils.config as config
 import src.analysis.figures as figs
+import src.utils.constants as const
 
 import time
 import requests
@@ -147,6 +148,60 @@ class KGManager():
                 output.append(entry)
         return output
         
+    def get_wikidata_from_wikipedia(self, wikipedia, attempts=3):
+        # contexts will have the form "xxx.org/wiki/ID#any_other_further_shit"
+        wikipedia_id = wikipedia.split('wiki/')[-1]
+        wikipedia_id = wikipedia_id.split('#')[0]
+        url = f"https://en.wikipedia.org/w/api.php?action=query&prop=pageprops&titles={wikipedia_id}&format=json"
+        data = None
+        attempts -= 1
+        
+        # Parse web requests
+        try:
+            response = requests.get(url, timeout=10)
+            data = response.json()
+        except Exception as e:
+            logging.info("Query '%s' failed. Attempts: %s" % (wikipedia, str(attempts)))
+            logging.info("\t" + str(e))
+            time.sleep(21) #to avoid limit of calls, sleep 60s
+            if attempts>0:
+                return self.get_wikidata_from_wikipedia(wikipedia, attempts)
+            else:
+                return None
+        
+        # Extract wikidata ID
+        wikidatas = []
+        if (query := data.get('query', None)) is not None:
+            if (pages := query.get('pages', None)) is not None:
+                for k, v in pages.items():
+                    if (pageprops := v.get('pageprops', None)) is not None:
+                        if (wikidata := pageprops.get('wikibase_item', None)) is not None:
+                            # add wikidata.org for consistency... maybe we can remvoe this
+                            wikidatas.append(f"http://www.wikidata.org/entity/{wikidata}")
+        if attempts < 1:
+            return wikidatas
+        
+        if 'wiki/' in wikipedia and len(wikidatas) == 0:
+            logging.error(f"No wikidata found for {wikipedia}. Something went wrong?. Debug: {url}")
+            logging.error("Attempting again with capitalized first letters")
+            wid_split = wikipedia_id.split('_')
+            wid_cap = "_".join([i.capitalize() for i in wid_split])
+            wid_first_cap = wid_split[0].capitalize() + "_" + "_".join(wid_split[1:])
+            wid_upper = "_".join([i.upper() for i in wid_split])
+            
+            capitalized = self.get_wikidata_from_wikipedia(wid_cap, attempts=1)
+            if capitalized is None or len(capitalized): return capitalized
+            
+            first_cap = self.get_wikidata_from_wikipedia(wid_first_cap, attempts=1)
+            if first_cap is None or len(first_cap): return first_cap
+            
+            upper = self.get_wikidata_from_wikipedia(wid_upper, attempts=1)
+            if upper is None or len(upper): return upper
+            
+        return wikidatas
+            
+        
+        
     def get_falcon_query(self, query_text, api_mode='long', timeout=5):
         url = f"https://labs.tib.eu/falcon/falcon2/api?mode={api_mode}&k=3&db=1"
         headers = {"Content-Type": "application/json"}
@@ -243,7 +298,7 @@ class KGManager():
     
     def process_queryable_entities(self, entity, entity_type, timeout=60):
         if 'N/A' in entity:
-            query_result = self.get_falcon_query(entity_type, timeout=30)
+            query_result = self.get_falcon_query(entity_type, timeout=30, api_mode=self.args.api_mode)
             if query_result is None:
                 logging.info(f"Error when querying Falcon API for {entity_type}, returned None.")
                 return None
@@ -272,6 +327,14 @@ class KGManager():
         queryable_subjects = self.process_queryable_entities(datapoint['subjects'], datapoint['input'])
         if queryable_subjects is None:
             return None
+        queryable_subjects = uti.flatten_if_2d(queryable_subjects)
+        queryable_subjects = list(set(queryable_subjects))  # Remove duplicates
+        queryable_subjects = f" {config.LIST_SEP} ".join(queryable_subjects)
+        
+        # if the answer type is numeric or date, we dont need to query falcon, later we'll use those for special queries
+        if datapoint['answer_type'] != const.ANS_TYPE_OTHER:
+            queryable_objects = datapoint['output']
+            return queryable_subjects, queryable_objects
 
         # Process queryable objects
         outputs = [datapoint['output']]
@@ -296,10 +359,11 @@ class KGManager():
         
         queryable_objects = uti.flatten_if_2d(queryable_objects)
         queryable_objects = list(set(queryable_objects))  # Remove duplicates
+        queryable_objects = f" {config.LIST_SEP} ".join(queryable_objects)
 
         return (
-            f" {config.LIST_SEP} ".join(queryable_subjects),
-            f" {config.LIST_SEP} ".join(queryable_objects)
+            queryable_subjects,
+            queryable_objects
         )
     
     def process_spacy_strategy(self, datapoint):
@@ -343,7 +407,7 @@ class KGManager():
 
         return ut, oet
     
-    def _get_kg_so_pairs(self, datapoint: dict, kg_name="wikidata"):
+    def _get_kg_so_pairs(self, datapoint: dict, kg_name="wikidata", flip_subj_obj=False):
         """ Returns a list of tuples that has all pair-wise combinations between subject-object entities """
         # get the entities
         subjects = datapoint.get("subjects")
@@ -354,6 +418,8 @@ class KGManager():
         # Subjects/objects may be seperated by <SEP>
         subjects = subjects.split(config.LIST_SEP)
         objects = objects.split(config.LIST_SEP)
+        subjects = list(set(subjects))
+        objects = list(set(objects))
 
         # Finally get the pairs
         pairs = []
@@ -361,14 +427,14 @@ class KGManager():
         for s in subjects:
             if kg_name not in s:
                 continue
+            s = s.split('/')[-1].strip()
 
             for o in objects:
-                if kg_name not in o:
-                    continue
+                # if kg_name not in o:
+                #     continue
                 
-                # extract only the QXXXX entity identifiers
-                if 'wikidata' in kg_name:
-                    s = s.split('/')[-1].strip()
+                # # extract only the QXXXX entity identifiers
+                if o in kg_name:
                     o = o.split('/')[-1].strip()
 
                 if 'dbpedia' in kg_name: # TODO cross-check this
@@ -380,7 +446,8 @@ class KGManager():
                     continue
 
                 pairs.append((s, o))
-                pairs.append((o, s)) # reverse the pair
+                if flip_subj_obj:
+                    pairs.append((o, s)) # reverse the pair
         
         logging.info(f"Number of pairs: {len(pairs)}")
         logging.info(f"Number of pairs where subject equals object: {s_equal_o}")
@@ -418,12 +485,16 @@ class KGManager():
         """ Returns the datapoints that are queryable """
         return data.filter(
             (pl.col('subjects').str.contains("wikidata.org")) & 
-            (pl.col('objects').str.contains("wikidata.org")) &
+            
+                (~pl.col('objects').str.contains("TIMEOUT") & 
+                ~pl.col('objects').str.contains("N/A") &
+                ~pl.col('objects').str.contains("NO_ENTITIES_FOUND")
+                ) &
             ((pl.col('responses') == 'N/A') |
-            (pl.col('responses') == '<NO_PATHS_FOUND>'))
-        )
+            (pl.col('responses') == '<NO_PATHS_FOUND>')))
 
-    def query_kg(self, data: pl.DataFrame, network_bridge: br.NetworkBridge, max_hops=4, start_hop=3):
+
+    def query_kg(self, data: pl.DataFrame, network_bridge: br.NetworkBridge, max_hops=4, start_hop=1):
         if "responses" not in data.columns:
             data = data.with_columns(
                 responses=pl.lit('N/A')
@@ -442,7 +513,8 @@ class KGManager():
             progress_bar.set_description(f"Querying Wikidata")
 
             # pair-wise path search between subject-object entities
-            pairs, number_of_circular = self._get_kg_so_pairs(datapoint)            
+            flip_subj_obj = datapoint.get('answer_type') == const.ANS_TYPE_OTHER
+            pairs, number_of_circular = self._get_kg_so_pairs(datapoint, flip_subj_obj=flip_subj_obj)            
             if not pairs:
                 continue
             
@@ -452,15 +524,21 @@ class KGManager():
             responses = []
             for subj, obj in pairs:
                 curr_hop = start_hop
+                obj = obj.strip()
+                if obj == "":
+                    continue
+                
                 while curr_hop <= max_hops:
                     # plug in the pair in the query
                     query_time = time.time()
-                    query = qb.get_query_so_hops(subj, obj, curr_hop)
-                    query_time = time.time() - query_time
-                    logging.debug(f"Processed {datapoint['id']} query for subj ({subj}) obj ({obj}) in time {query_time:.3f}: \n" + query)
+                    query_func = qb.get_query_per_answer_type(datapoint['answer_type'])
+                    query = query_func(subj, obj, hops=curr_hop)
                     
                     # run the query and save the response
                     response = network_bridge.send_message(message=query)
+                    
+                    query_time = time.time() - query_time
+                    logging.info(f"Processed {datapoint['id']} query for subj ({subj}) obj ({obj}) in time {query_time:.3f}: \n")
                     if response:
                         parsed = self.parse_response(subj, obj, response)
                         if len(parsed) > 0:
@@ -509,6 +587,10 @@ class KGManager():
         logging.info("<--- End of Header --->\n")
         self.df = self.logger.getResultDataframe(data, self.hops)
         start_time = time.time()
+        
+        # DEBUG: remove rows where answer_type is not "other"
+        # data = data.filter(pl.col('answer_type') != const.ANS_TYPE_OTHER)
+        
         data.write_json(f"deleteme_before_full.json")
         column_order = data['id'].to_list()
         
@@ -528,8 +610,9 @@ class KGManager():
         
         data_to_query = self.get_unprocessed_datapoints(data)
         data_to_not_query = data.join(data_to_query, on="id", how="anti")
+        num_wikis_from_context = 0
         
-        for datapoint in tqdm(data_to_query.iter_rows(named=True), "Processing Dataset", total=data_to_query.shape[0]):
+        for idx, datapoint in enumerate(tqdm(data_to_query.iter_rows(named=True), "Processing Dataset", total=data_to_query.shape[0])):
             if not self.checkValidDatapoint(datapoint):
                 self.df = self.logger.concatResults(self.df, datapoint, [])
                 self.logger.saveResults(self.df, self.args)
@@ -540,13 +623,27 @@ class KGManager():
                 continue
             
             logging.info("")
-            logging.info(f"Processing datapoint: {datapoint['id']}")
+            logging.info(f"Processing datapoint: {datapoint['id']}; {idx}/{data_to_query.shape[0]}")
             strategy_result = self.process_falcon_strategy(datapoint)
             if strategy_result is None:
                 logging.info(f"Strategy result is None for datapoint: {datapoint['id']}")
                 continue
-           
             queryable_subjects, queryable_objects = strategy_result
+            
+            # check context for wikipedia
+            if (_cntx := datapoint['context']) is not None:
+                for cntx in _cntx.split(config.LIST_SEP):
+                    if "wikipedia.org" not in cntx:
+                        continue
+                    
+                    get_wikidata_from_wikipedia = self.get_wikidata_from_wikipedia(cntx)
+                    if get_wikidata_from_wikipedia is not None and len(get_wikidata_from_wikipedia) > 0:
+                        num_wikis_from_context += len(get_wikidata_from_wikipedia)
+                        wiki_from_context = f" {config.LIST_SEP} ".join(get_wikidata_from_wikipedia)
+                        queryable_objects = f" {config.LIST_SEP} ".join([wiki_from_context, queryable_objects])
+                        queryable_subjects = f" {config.LIST_SEP} ".join([wiki_from_context, queryable_subjects])
+                        
+            
             datapoint['subjects'] = queryable_subjects
             datapoint['objects'] = queryable_objects
 
@@ -606,6 +703,7 @@ class KGManager():
         logging.info(f"Number of datapoints where subjects is not N/A: {data.filter(data['subjects'] != 'N/A').shape[0]}")
         logging.info(f"Number of datapoints where objects is not N/A: {data.filter(data['objects'] != 'N/A').shape[0]}")
         logging.info(f"Number of datapoints where subjects and objects is not N/A: {data.filter((data['subjects'] != 'N/A') & (data['objects'] != 'N/A')).shape[0]}")
+        logging.info(f"Found {num_wikis_from_context} wikis from context")
         
         return data
                 

@@ -2,6 +2,56 @@ import json
 from itertools import chain
 import torch
 import logging
+from dateutil import parser
+from datetime import datetime
+import src.utils.helpers as hlp
+import src.utils.constants as const
+import string
+
+
+def parse_flexible_date(date_str):
+    try:
+        date = parser.parse(date_str, fuzzy=False, default=None)
+        # if year is larger than 2100, return None
+        if date.year > 2100:
+            return None
+        return date.strftime("%d %B %Y")  # Format output as "17 September 2009"
+    except Exception as e:
+        return None
+
+def get_answer_types(answers: list):
+    output = []
+    for idx, i in enumerate(answers):
+        # parse date
+        to_parse = i.translate(str.maketrans('', '', string.punctuation.replace('.', '')))
+        if (date_parsed := hlp.parse_flexible_date(to_parse)) is not None and len(to_parse) >= 4 and len(to_parse) <= 20:
+            output.append(const.ANS_TYPE_DATE)
+            continue
+        
+        number_parse = None
+        try: number_parse = float(to_parse)
+        except: pass
+        
+        if number_parse is not None:
+            output.append(const.ANS_TYPE_NUMBER)
+            continue        
+        
+        # add other
+        else:
+            output.append(const.ANS_TYPE_OTHER)
+            
+    return output
+
+def remap_answer_types(answer: str):
+    output = []
+    mappings = {
+        "rank": const.ANS_TYPE_NUMBER,
+        "numeric": const.ANS_TYPE_NUMBER,
+        "number": const.ANS_TYPE_NUMBER,
+        "date": const.ANS_TYPE_DATE,
+    }
+    return mappings.get(answer, const.ANS_TYPE_OTHER)
+        
 
 def remove_starting_pronouns(text: str):
     pronouns = ['the']

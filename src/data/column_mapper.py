@@ -2,6 +2,7 @@ import polars as pl
 from datasets import Dataset
 from src.utils.singleton import Singleton
 import src.utils.config as config
+import src.utils.helpers as helpers
 
 class ColumnMapper(metaclass=Singleton):
     def __init__(self):
@@ -17,6 +18,7 @@ class ColumnMapper(metaclass=Singleton):
         self.INCORRECT_ANSWERS = 'incorrect_answers' # incorrect outputs
         self.CONTEXT = 'context' # context for the data point
         self.CONTEXT_TYPE = 'context_type' # type of context, web or passage
+        self.ANSWER_TYPE = "answer_type" # type of an answer (numerical, date, etc..) used for queries
 
     def get_blank_df(self):
         return pl.DataFrame([], self.get_multihal_columns())
@@ -46,7 +48,9 @@ class ColumnMapper(metaclass=Singleton):
             self.INCORRECT_ANSWERS: str,
             self.CONTEXT: str,
             self.CONTEXT_TYPE: str,
+            self.ANSWER_TYPE: str,
         }
+        
         
     def get_shroom2024_mappings(self, task):
         """ Mappings for the SHROOM2024 dataset.
@@ -201,12 +205,27 @@ class ColumnMapper(metaclass=Singleton):
         # is source_dataset present?
         if last_merge['source_dataset'].is_null().all():
             last_merge = last_merge.with_columns(pl.col('source_dataset').fill_null(src_ds))
-
+            
+        # is answer type present?
+        if last_merge['answer_type'].is_null().all():
+            answer_types = helpers.get_answer_types(last_merge['output'].to_list())
+            last_merge = last_merge.replace_column(
+                last_merge.get_column_index('answer_type'),
+                pl.Series("answer_type", answer_types)
+            )
+            
         # are IDs present?
         if last_merge['id'].is_null().all():
             last_merge = last_merge.with_columns(pl.Series("id", [f"{src_ds}_" + str(i) for i in range(0, len(last_merge))]))
 
         return pl.concat([primary[:-last_merge_len], last_merge], how='vertical')
+    
+    def normalize_answer_types(self, df: pl.DataFrame) -> pl.DataFrame:
+        # clean up answer_types
+        
+        df = df.with_columns(pl.col("answer_type").map_elements(lambda x: helpers.remap_answer_types(x)))
+        # replace answer_types
+        return df
     
     def convert_list_str_to_str(self, ds: pl.DataFrame) -> pl.DataFrame:
         """ Converts columns with list type to string type """
@@ -283,10 +302,16 @@ class ColumnMapper(metaclass=Singleton):
         mappings = self.defan_mappings()
         merged = self.merge_dataframes(multihal, defan, mappings)
         merged = self.add_metadata(merged, defan, 'defan')
+        
+        # normalize answer types
+        merged = self.normalize_answer_types(merged)
         return merged
     
     def merge_simpleqa(self, multihal: pl.DataFrame, simpleqa: pl.DataFrame, task=None) -> pl.DataFrame:
         mappings = self.get_simpleqa_mappings()
         merged = self.merge_dataframes(multihal, simpleqa, mappings)
         merged = self.add_metadata(merged, simpleqa, 'simpleqa')
+        
+        # normalize answer types
+        merged = self.normalize_answer_types(merged)
         return merged

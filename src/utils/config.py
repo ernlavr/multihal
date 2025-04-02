@@ -127,7 +127,7 @@ class GlobalConfig(metaclass=singl.Singleton):
             
             # Control
             debug_mode=True,                # Debug mode
-            n_pds=5,                        # Number of datapoints to sample for debugging
+            n_pds=None,                        # Number of datapoints to sample for debugging
             gen_anlyz_figs=False,           
             gen_sent_embeds=False,
             wandb_online=False,
@@ -138,7 +138,7 @@ class GlobalConfig(metaclass=singl.Singleton):
             evaluate=False,                  # Evaluate the dataset triples
             test_knowledge_injection=False,  # Test the knowledge injection
             remove_refused_answers=False,
-            api_mode='long',                # string, either 'long' or 'short' for Falcon2.0 mode
+            api_mode='short',                # string, either 'long' or 'short' for Falcon2.0 mode
             llm_judge_method=None,  # string, either 'proprietary' or 'deepeval'
             knowledge_inj_task=None,        # string, either 'grag', 'rag' or 'qa'
             
