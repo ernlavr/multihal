@@ -20,7 +20,7 @@ class DataManager(metaclass=sing.Singleton):
         self.args = args
         
 
-        if args.continue_from_previous_state is None:
+        if args.continue_from_previous_state is None and args.load_premade_dataset is None:
             self.ds = dl.load_data(args)
             self.merge_data()
             self.serialize_ds()
@@ -33,7 +33,18 @@ class DataManager(metaclass=sing.Singleton):
 
     def get_premade_dataset(self, args):
         # get extension
-        ds_path = args.continue_from_previous_state['dataset']
+        if args.continue_from_previous_state is not None \
+        and args.continue_from_previous_state['dataset'] is not None \
+        and args.load_premade_dataset is not None:
+            raise ValueError("Ambiguous which dataset to load, previous state and premade are both specified")
+        
+        if args.continue_from_previous_state is not None:
+            ds_path = args.continue_from_previous_state['dataset']
+        
+        if args.load_premade_dataset is not None:
+            ds_path = args.load_premade_dataset
+        
+        
         ext = ds_path.split('.')[-1]
         if ext == 'csv':
             return pl.read_csv(ds_path)

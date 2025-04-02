@@ -350,7 +350,10 @@ class KGManager():
             outputs = outputs.split(config.LIST_SEP)
             
         if datapoint['optional_output'] is not None:
-            outputs.extend(datapoint['optional_output'].split(config.LIST_SEP))
+            opt_outputs = datapoint['optional_output'].split(config.LIST_SEP)
+            if len(opt_outputs) > 2:
+                opt_outputs = opt_outputs[:2]
+            outputs.extend(opt_outputs)
         
         outputs = list(set(outputs))  # Remove duplicates
         if len(outputs) > 5:
