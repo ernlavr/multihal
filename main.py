@@ -240,6 +240,7 @@ def main() -> None:
     data_manager = dm.DataManager(args)
     analyzer = None
     dataset = data_manager.get_dataset(args)
+    dataset = data_manager.cleanup(dataset)
     logging.info(f"Dataset length: {dataset.shape[0]}")
     
     # DEBUG: get only datapoints with answer_type == "date"

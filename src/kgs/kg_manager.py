@@ -335,6 +335,9 @@ class KGManager():
         queryable_subjects = self.process_queryable_entities(datapoint['subjects'], datapoint['input'])
         if queryable_subjects is None:
             return None
+        
+        # check if any of the entities are directly present in the datapoint
+        
         queryable_subjects = uti.flatten_if_2d(queryable_subjects)
         queryable_subjects = list(set(queryable_subjects))  # Remove duplicates
         queryable_subjects = f" {config.LIST_SEP} ".join(queryable_subjects)
@@ -480,6 +483,7 @@ class KGManager():
 
         else:
             for i in response['results']['bindings']:
+                num_paths = len(response['results']['bindings'])
                 filtered = [item for item in i.keys() if "Label" not in item]
                 filtered.sort(key=lambda x: (int(x[1:]), x[0] == 'o'))
                 path = ""
@@ -488,8 +492,16 @@ class KGManager():
                         continue
                     else:
                         path += f"{i[j]['value']} ".split('/')[-1]
-                paths += f"{subj} {path} {obj} {config.LIST_SEP}"
-
+                
+                # format path
+                path = f"{subj} {path} "
+                if obj is not None:
+                    path += f"{obj} "
+                path += f"{config.LIST_SEP}"
+                
+                paths += path
+        
+        
         return paths
     
     def get_queryable_datapoints(self, data: pl.DataFrame):
@@ -504,6 +516,14 @@ class KGManager():
             ((pl.col('responses') == 'N/A') |
             (pl.col('responses') == '<NO_PATHS_FOUND>')))
 
+    def cleanup_obj(self, obj: str):
+        # remove start, end white space
+        obj = obj.strip()
+        # remove ending dots
+        obj = obj.rstrip('.')
+        # remove commas
+        obj = obj.replace(',', '')
+        return obj
 
     def query_kg(self, data: pl.DataFrame, network_bridge: br.NetworkBridge, max_hops=4, start_hop=1):
         if "responses" not in data.columns:
@@ -524,8 +544,8 @@ class KGManager():
             progress_bar.set_description(f"Querying Wikidata")
 
             # pair-wise path search between subject-object entities
-            flip_subj_obj = datapoint.get('answer_type') == const.ANS_TYPE_OTHER
-            pairs, number_of_circular = self._get_kg_so_pairs(datapoint, flip_subj_obj=flip_subj_obj)            
+            ans_is_type_other = datapoint.get('answer_type') == const.ANS_TYPE_OTHER
+            pairs, number_of_circular = self._get_kg_so_pairs(datapoint, flip_subj_obj=ans_is_type_other)            
             if not pairs:
                 continue
             
@@ -535,7 +555,7 @@ class KGManager():
             responses = []
             for subj, obj in pairs:
                 curr_hop = start_hop
-                obj = obj.strip()
+                obj = self.cleanup_obj(obj)
                 if obj == "":
                     continue
                 
@@ -551,12 +571,14 @@ class KGManager():
                     query_time = time.time() - query_time
                     logging.info(f"Processed {datapoint['id']} query for subj ({subj}) obj ({obj}) in time {query_time:.3f}: \n")
                     if response:
-                        parsed = self.parse_response(subj, obj, response)
+                        # semi-hacky way to check if we need to add obj.. for nums/dates the object will be last ?o variable in the query
+                        parsed = self.parse_response(subj, obj, response) if ans_is_type_other else self.parse_response(subj, None, response)
                         if len(parsed) > 0:
                             responses.append(parsed)
                             break
                     # increase hop
                     curr_hop += 1
+                    
             
             responses = " ".join(responses).strip()
             # remove last <SEP>

@@ -45,7 +45,7 @@ def get_answer_types(answers: list):
 def remap_answer_types(answer: str):
     output = []
     mappings = {
-        "rank": const.ANS_TYPE_NUMBER,
+        "rank": const.ANS_TYPE_RANK,
         "numeric": const.ANS_TYPE_NUMBER,
         "number": const.ANS_TYPE_NUMBER,
         "date": const.ANS_TYPE_DATE,

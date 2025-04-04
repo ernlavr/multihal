@@ -245,6 +245,7 @@ class SPARQLEndpoint(object):
             #print(result)
             #print(result["uri"]["value"])
             uri_value = result["wikidataEntity"]["value"]
+            uri_label = result["wikidataEntityLabel"]["value"]
             
             if not filter_uri or uri_value.startswith(URI_KG.dbpedia_uri) or uri_value.startswith(URI_KG.wikidata_uri) or uri_value.startswith(URI_KG.schema_uri) or uri_value.startswith(URI_KG.dbpedia_uri_resource) or uri_value.startswith(URI_KG.dbpedia_uri_property): 
                 result_set.add(uri_value)

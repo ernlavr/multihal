@@ -23,6 +23,7 @@ def get_kg_mappings():
 ANS_TYPE_OTHER = "other"
 ANS_TYPE_DATE = "date"
 ANS_TYPE_NUMBER = "number"
+ANS_TYPE_RANK = "rank"
 PROPS_TIMED_PATH = "res/wd_properties_to_ignore/time_based_props.json"
 PROPS_NUM_PATH = "res/wd_properties_to_ignore/numerical_props.json"
 
@@ -39,3 +40,6 @@ def get_list_of_timed_props(path):
             if "DEPRECATED" not in label:
                 output[prop] = label
     return output
+
+def get_list_of_rank_properties(path=None):
+    return {"P1352":"ranking"}

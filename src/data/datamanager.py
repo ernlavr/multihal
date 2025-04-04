@@ -67,6 +67,15 @@ class DataManager(metaclass=sing.Singleton):
         if args is not None:
             return self.df.filter(pl.col("source_dataset").is_in(args.datasets))
         return self.df
+    
+    def cleanup(self, dataset: pl.DataFrame) -> pl.DataFrame:
+        """ Cleans up the dataset """
+        # remove starting and ending whitespaces in all columns
+        string_cols = dataset.select(pl.col(pl.Utf8)).columns
+        dataset = dataset.with_columns(
+            pl.col(string_cols).str.strip_chars(" ")
+        )
+        return dataset
 
     def serialize_ds(self):
         """ Serializes the datasets into the main dataframe """
@@ -142,7 +151,6 @@ class DataManager(metaclass=sing.Singleton):
                     self.df = merge_funcs[ds](self.df, self.ds[ds][split].to_polars())
 
 
-        
         # remove where output is None
         self.df = self.df.filter(~pl.col("output").is_null())
         self.df = self.df.with_columns(pl.col('domain').str.to_lowercase())
