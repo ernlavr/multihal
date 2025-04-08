@@ -11,11 +11,11 @@ import string
 
 def parse_flexible_date(date_str):
     try:
-        date = parser.parse(date_str, fuzzy=False, default=None)
+        date = parser.parse(date_str, fuzzy=False, default=datetime(1900, 1, 1))
         # if year is larger than 2100, return None
         if date.year > 2100:
             return None
-        return date.strftime("%d %B %Y")  # Format output as "17 September 2009"
+        return date.strftime("%Y-%m-%d")  # Format output as "17 September 2009"
     except Exception as e:
         return None
 

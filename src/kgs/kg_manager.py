@@ -421,7 +421,7 @@ class KGManager():
 
         return ut, oet
     
-    def _get_kg_so_pairs(self, datapoint: dict, kg_name="wikidata", flip_subj_obj=False):
+    def _get_kg_so_pairs(self, datapoint: dict, kg_name="wikidata", is_ans_other_type=False):
         """ Returns a list of tuples that has all pair-wise combinations between subject-object entities """
         # get the entities
         subjects = datapoint.get("subjects")
@@ -444,11 +444,11 @@ class KGManager():
             s = s.split('/')[-1].strip()
 
             for o in objects:
-                # if kg_name not in o:
-                #     continue
+                if is_ans_other_type == False and kg_name in o:
+                    continue
                 
                 # # extract only the QXXXX entity identifiers
-                if o in kg_name:
+                if kg_name in o:
                     o = o.split('/')[-1].strip()
 
                 if 'dbpedia' in kg_name: # TODO cross-check this
@@ -458,14 +458,17 @@ class KGManager():
                 if s == o:
                     s_equal_o += 1
                     continue
-
+                
                 pairs.append((s, o))
-                if flip_subj_obj:
+                if is_ans_other_type:   # normally we wanna reverse it
                     pairs.append((o, s)) # reverse the pair
+
+                
         
         logging.info(f"Number of pairs: {len(pairs)}")
         logging.info(f"Number of pairs where subject equals object: {s_equal_o}")
         return pairs, s_equal_o
+    
 
     def parse_response(self, subj, obj, response: dict):
         """ Parse the response from the network bridge """
@@ -488,10 +491,21 @@ class KGManager():
                 filtered.sort(key=lambda x: (int(x[1:]), x[0] == 'o'))
                 path = ""
                 for j in filtered:
+                    val = i[j]['value']
+                    
                     if 'Label' in j:
+                        continue     
+                    if 'o99' in j and 'Q199' in val:
                         continue
+        
+                    if 'rdf-syntax-ns' in val or 'prov#' in val or 'ontology#' in val or 'pqv:' in val:
+                        path = ""
+                        break              
                     else:
                         path += f"{i[j]['value']} ".split('/')[-1]
+                
+                if path == "":
+                    continue
                 
                 # format path
                 path = f"{subj} {path} "
@@ -525,7 +539,7 @@ class KGManager():
         obj = obj.replace(',', '')
         return obj
 
-    def query_kg(self, data: pl.DataFrame, network_bridge: br.NetworkBridge, max_hops=4, start_hop=1):
+    def query_kg(self, data: pl.DataFrame, network_bridge: br.NetworkBridge, max_hops=2, start_hop=1):
         if "responses" not in data.columns:
             data = data.with_columns(
                 responses=pl.lit('N/A')
@@ -533,19 +547,19 @@ class KGManager():
         start_time = time.time()
         
         queryable_datapoints = self.get_queryable_datapoints(data)
-        
         progress_bar = tqdm(queryable_datapoints.iter_rows(named=True), total=queryable_datapoints.shape[0])
         # datapoint add column responses
         
         total_number_of_pairs = 0
         total_number_of_circular = 0
+        total_number_of_queries = 0
         for datapoint in progress_bar:
             logging.info(f"Processing Datapoint: {datapoint['id']}")
             progress_bar.set_description(f"Querying Wikidata")
 
             # pair-wise path search between subject-object entities
             ans_is_type_other = datapoint.get('answer_type') == const.ANS_TYPE_OTHER
-            pairs, number_of_circular = self._get_kg_so_pairs(datapoint, flip_subj_obj=ans_is_type_other)            
+            pairs, number_of_circular = self._get_kg_so_pairs(datapoint, is_ans_other_type=ans_is_type_other)            
             if not pairs:
                 continue
             
@@ -561,6 +575,7 @@ class KGManager():
                 
                 while curr_hop <= max_hops:
                     # plug in the pair in the query
+                    total_number_of_queries += 1
                     query_time = time.time()
                     query_func = qb.get_query_per_answer_type(datapoint['answer_type'])
                     query = query_func(subj, obj, hops=curr_hop)
@@ -594,10 +609,11 @@ class KGManager():
             data.write_json(f"{self.args.data_dir}/data_subj_obj_parsed_queried_wd.json")
 
         end_time = time.time()
-        logging.info(f"Total time taken: {(end_time - start_time):.2f}")
-        logging.info("Total number of pairs: {total_number_of_pairs}")
-        logging.info("Total number of circular pairs: {total_number_of_circular}")
-        logging.info(f"Max hops: {max_hops}")
+        logging.info(f"Total time taken: {(end_time - start_time):.2f}s")
+        logging.info(f"Total number of pairs: {total_number_of_pairs}")
+        logging.info(f"Total number of circular pairs: {total_number_of_circular}")
+        logging.info(f"Total number of pairs: {total_number_of_pairs}")
+        logging.info(f"Total number of queries: {total_number_of_queries} (max hops: {max_hops})")
         logging.info(f"Number of queryable datapoints: {queryable_datapoints.shape[0]}")
         
         return data

@@ -1,25 +1,17 @@
 import src.utils.constants as const
+import src.utils.helpers as helpers
 
 def get_query_per_answer_type(answer_type):
     if answer_type == const.ANS_TYPE_DATE:
         return lambda ent, qual_val, hops: get_with_qualifier(ent, qual_val, hops, const.get_list_of_timed_props(const.PROPS_TIMED_PATH))
     elif answer_type == const.ANS_TYPE_NUMBER:
-        return lambda ent, qual_val, hops: get_numerical_lit(ent, qual_val, hops, const.get_list_of_timed_props(const.PROPS_NUM_PATH))
+        return lambda ent, qual_val, hops: get_numerical_lit(ent, qual_val, hops, const.get_list_of_timed_props(const.PROPS_NUM_PATH), add_unit=True)
     elif answer_type == const.ANS_TYPE_RANK:
-        return lambda ent, qual_val, hops: get_numerical_lit(ent, qual_val, hops, const.get_list_of_rank_properties())
+        return lambda ent, qual_val, hops: get_numerical_lit(ent, qual_val, hops, const.get_list_of_rank_properties(), add_unit=False)
     elif answer_type == const.ANS_TYPE_OTHER:
         return get_query_so_hops
     else:
         raise ValueError(f"Unknown answer type: {answer_type}")
-    
-def get_for_rank(entity, rank_value, hops=1, prop_dict=None):
-    select, where_clauses = get_statement_decoding_(entity, hops=hops)
-    select_formatted = "SELECT " + " ".join([i for i in select])
-    where_clause_formatted = " WHERE {    \n" + "    ".join(where_clauses) + ""
-    where_clause_formatted = where_clause_formatted.replace(".", ".\n")
-    
-    # allowed values, for uni ranks it should always be 
-    timed_props_formatted = "{" + " ".join([f"pq:{i} wdt:{i}" for i in prop_dict.keys()]) + "}"
     
     
 
@@ -44,17 +36,16 @@ def get_with_qualifier(entity, qualifier_value, hops=1, prop_dict=None):
     where_clause_formatted = " WHERE {    \n" + "    ".join(where_clauses) + ""
     where_clause_formatted = where_clause_formatted.replace(".", ".\n")
     
+    qualifier_value = helpers.parse_flexible_date(qualifier_value)
+    
     # property ignore list
-    timed_props_formatted = "{" + " ".join([f"pq:{i} wdt:{i} psv:{i}" for i in prop_dict.keys()]) + "}"
+    timed_props_formatted = "{" + " ".join([f"pq:{i} ps:{i}" for i in prop_dict.keys()]) + "}"
     
     filter_props_string = f"VALUES {where_clauses[-2]} {timed_props_formatted}" # FILTER (!REGEX(STR(?property), "P1477|1813"))
     # add qualifier part
-    where_clause_formatted += f"FILTER(CONTAINS(STR({where_clauses[-1][:-1]}), \'{qualifier_value}\'))"  # Ensure the qualifier contains \"1962\"\n"
+    where_clause_formatted += f"FILTER(CONTAINS(STR({where_clauses[-1][:-1].strip()}), \'{qualifier_value}\'))"  # Ensure the qualifier contains \"1962\"\n"
     
-    filters = """
-        FILTER CONTAINS(str(?p1), 'wikidata.org/prop/direct/')
-        SERVICE wikibase:label { bd:serviceParam wikibase:language '[AUTO_LANGUAGE],en'. }
-    """
+    filters = " SERVICE wikibase:label { bd:serviceParam wikibase:language '[AUTO_LANGUAGE],en'. }"
     final_query = f"{_define_prefixes()}" + \
                   f"{select_formatted}" + \
                   f"{where_clause_formatted}" + \
@@ -64,31 +55,37 @@ def get_with_qualifier(entity, qualifier_value, hops=1, prop_dict=None):
     return add_eos(final_query) # eos as custom protocol
 
 
-def get_numerical_lit(entity, qualifier_value, hops=1, prop_dict=None):
-    select, where_clauses = get_multihop_select_where_vars(entity, hops=hops)
+def get_numerical_lit(entity, qualifier_value, hops=1, prop_dict=None, add_unit=False):
+    select, where_clauses = get_statement_decoding_(entity, hops=hops)
+    if add_unit:
+        select.append('?o99')
     select_formatted = "SELECT " + " ".join([i for i in select])
     where_clause_formatted = " WHERE {    \n" + "    ".join(where_clauses) + ""
     where_clause_formatted = where_clause_formatted.replace(".", ".\n")
     
-    # property ignore list
-    timed_props_formatted = "{" + " ".join([f"pq:{k} wdt:{k}" for k in prop_dict.keys()]) + "}"
+    # Define allowed properties, this is the last property
+    _timed_props_formatted = "{" + " ".join([f"pq:{k} ps:{k}" for k in prop_dict.keys()]) + "}"
+    filter_props_string = f"VALUES {where_clauses[-2]} {_timed_props_formatted} \n" # FILTER (!REGEX(STR(?property), "P1477|1813"))
     
-    filter_props_string = f"VALUES {where_clauses[-2]} {timed_props_formatted}" # FILTER (!REGEX(STR(?property), "P1477|1813"))
-    # add qualifier part
-    where_clause_formatted += f"FILTER(CONTAINS(STR({where_clauses[-1][:-1]}), \'{qualifier_value}\'))"  # Ensure the qualifier contains \"1962\"\n"
+    # add filters
+    filter_numeric = f"FILTER(isNumeric({where_clauses[-1][:-1]})) \n" # our target needs to be numeric
+    where_clause_formatted += f"FILTER (STR({where_clauses[-1][:-1]}) = '{qualifier_value}') \n"  # Ensure the qualifier contains \"1962\"\n"    
     
-    filters = """
-        FILTER CONTAINS(str(?p1), 'wikidata.org/prop/direct/')
-        SERVICE wikibase:label { bd:serviceParam wikibase:language '[AUTO_LANGUAGE],en'. }
-    """
+    # add optional for deriving a unit for numeric
+    label_service = "SERVICE wikibase:label { bd:serviceParam wikibase:language '[AUTO_LANGUAGE],en'. } \n"
+    
     final_query = f"{_define_prefixes()}" + \
                   f"{select_formatted}" + \
                   f"{where_clause_formatted}" + \
-                  f"{filters}" + \
+                  f"{filter_numeric}" + \
+                  f"{label_service}" + \
                   f"{filter_props_string}"
+    if add_unit:
+        optional_unit = f"OPTIONAL {{ {where_clauses[-4][:-1]} wikibase:quantityUnit {select[-1]} . }} \n"
+        final_query += f"{optional_unit}"
+        
     final_query += '}' # close it off
     return add_eos(final_query) # eos as custom protocol
-
     
 
     
@@ -288,7 +285,7 @@ def get_statement_decoding_(subj, hops=1):
         where_clauses.append(f"?o{i} .")
 
     # add the statement decoding
-    where_clauses[-3] = where_clauses[-4].replace(" .", "") # 2nd last object
+    where_clauses[-3] = where_clauses[-6]
     
     return select_vars, where_clauses
 
@@ -315,15 +312,15 @@ def get_multihop_select_where_vars(subj, obj=None, hops=1):
 
 
 
-with_unit = """
-SELECT ?statement ?statementLabel ?val ?valuenode ?unit ?unitLabel WHERE {
-  wd:Q2412190 p:P2046 ?statement .  # Get the numeric value
-  ?statement psv:P2046 ?valuenode .
-  OPTIONAL { ?valuenode wikibase:quantityUnit ?unit . }  # Retrieve unit if available
-  OPTIONAL {}
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
-}
-"""
+# with_unit = """
+# SELECT ?statement ?statementLabel ?val ?valuenode ?unit ?unitLabel WHERE {
+#   wd:Q2412190 p:P2046 ?statement .  # Get the numeric value
+#   ?statement psv:P2046 ?valuenode .
+#   OPTIONAL { ?valuenode wikibase:quantityUnit ?unit . }  # Retrieve unit if available
+#   OPTIONAL {}
+#   SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+# }
+# """
 
 with_union = """
 SELECT ?p ?p1 ?pLabel ?o ?oLabel ?qv ?val ?statement ?statementLabel ?p1Label ?p2 ?o2 ?p3 ?unit WHERE {
@@ -355,3 +352,6 @@ SELECT ?p ?p1 ?pLabel ?o ?oLabel ?qv ?val ?statement ?statementLabel ?p1Label ?p
   }
 }
 """
+
+# Query cases
+# Direct literal (numeric, data)

@@ -3,12 +3,14 @@ import json
 import time
 from pprint import pprint
 import logging
-
+import src.network.api.endpoints as endpoints
 
 class NetworkBridge:
     def __init__(self, host="127.0.0.1", port=12347):
         self.host = host
         self.port = port
+        self.wd_endpoint = endpoints.WikidataEndpoint()
+        
 
     def forward_to_container(self, query):
         """Forward the incoming traffic to the container at localhost:1234/api/endpoint/sparql"""
@@ -24,6 +26,11 @@ class NetworkBridge:
 
     def send_message(self, host="127.0.0.1", port=12347, message="Hello, Server!"):
         """ Send a message to the server endpoint and return the response """
+        
+        # first try to query wikidata public endpoint
+        wd_response = self.query_wd_endpoint(message)
+        if wd_response is not None:
+            return wd_response
         
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
             client_socket.connect((host, port))  # Connect to the server
@@ -50,6 +57,14 @@ class NetworkBridge:
             response = json.loads(response)
             return response
 
+    def query_wd_endpoint(self, query):
+        query = query.replace("<|EOS|>", "") # EOS is a custom token for us, WD doesnt need it
+        results = self.wd_endpoint.getQueryResults(query, 1)
+        if results is None:
+            logging.error("Error: No results from the endpoint")
+            return None
+        
+        return results
 
 if __name__ == "__main__":
     prefixes = r"""
