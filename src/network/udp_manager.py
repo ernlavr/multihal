@@ -24,12 +24,15 @@ class NetworkBridge:
             response = client_socket.recv(1024)
             print(f"Received")
 
-    def send_message(self, host="127.0.0.1", port=12347, message="Hello, Server!"):
+    def send_message(self, host="127.0.0.1", port=12347, message="Hello, Server!", use_only_wd=False):
         """ Send a message to the server endpoint and return the response """
         
         # first try to query wikidata public endpoint
         wd_response = self.query_wd_endpoint(message)
         if wd_response is not None:
+            return wd_response
+        
+        if use_only_wd:
             return wd_response
         
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
@@ -59,7 +62,7 @@ class NetworkBridge:
 
     def query_wd_endpoint(self, query):
         query = query.replace("<|EOS|>", "") # EOS is a custom token for us, WD doesnt need it
-        results = self.wd_endpoint.getQueryResults(query, 1)
+        results = self.wd_endpoint.getQueryResults(query, 3)
         if results is None:
             logging.error("Error: No results from the endpoint")
             return None

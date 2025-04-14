@@ -447,6 +447,9 @@ class KGManager():
                 if is_ans_other_type == False and kg_name in o:
                     continue
                 
+                if o is None or len(o) == 0:
+                    continue
+                
                 # # extract only the QXXXX entity identifiers
                 if kg_name in o:
                     o = o.split('/')[-1].strip()
@@ -527,8 +530,7 @@ class KGManager():
                 ~pl.col('objects').str.contains("N/A") &
                 ~pl.col('objects').str.contains("NO_ENTITIES_FOUND")
                 ) &
-            ((pl.col('responses') == 'N/A') |
-            (pl.col('responses') == '<NO_PATHS_FOUND>')))
+            ((pl.col('responses') == 'N/A')))
 
     def cleanup_obj(self, obj: str):
         # remove start, end white space
@@ -581,10 +583,10 @@ class KGManager():
                     query = query_func(subj, obj, hops=curr_hop)
                     
                     # run the query and save the response
-                    response = network_bridge.send_message(message=query)
+                    response = network_bridge.send_message(message=query, use_only_wd=True)
                     
                     query_time = time.time() - query_time
-                    logging.info(f"Processed {datapoint['id']} query for subj ({subj}) obj ({obj}) in time {query_time:.3f}: \n")
+                    logging.info(f"Processed {datapoint['id']} query for subj ({subj}) obj ({obj}) in time {query_time:.3f}: \n; hop: {curr_hop}")
                     if response:
                         # semi-hacky way to check if we need to add obj.. for nums/dates the object will be last ?o variable in the query
                         parsed = self.parse_response(subj, obj, response) if ans_is_type_other else self.parse_response(subj, None, response)
