@@ -141,6 +141,8 @@ class GlobalConfig(metaclass=singl.Singleton):
             api_mode='short',                # string, either 'long' or 'short' for Falcon2.0 mode
             llm_judge_method=None,  # string, either 'proprietary' or 'deepeval'
             knowledge_inj_task=None,        # string, either 'grag', 'rag' or 'qa'
+            get_trip_labels=None,           # for retrieving labels from WD. 99% of time enable filter_paths
+            filter_paths=None,              # to clean up KG paths (remove unnecessary ones, unify whitespacing)
             
             load_premade_dataset=None,      # string, path to a premade dataset
             continue_from_previous_state=None, # dict {RUN_ID: str, dataset: str, functions: list}

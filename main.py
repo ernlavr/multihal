@@ -179,6 +179,37 @@ def query_kg(dataset: Any, args: Any) -> None:
     kg_manager.query_kg(dataset, bridge, max_hops=2)
     logging.info("Finished querying KGs")
 
+def filter_paths(dataset: Any, args: Any) -> None:
+    """
+    Filter paths in the dataset based on the specified criteria.
+
+    Parameters:
+        dataset (Any): The dataset to filter.
+        args (Any): Configuration object.
+    """
+    kg_manager = kgm.KGManager(dataset, args)
+    # Filter paths based on the provided criteria
+    dataset = kg_manager.filter_paths(dataset)
+    # Save the filtered paths to a JSON file
+    dataset.write_json(f"{args.data_dir}/filtered_paths.json")
+    logging.info("Finished filtering paths")
+    return dataset
+
+def get_trip_labels(dataset: Any, args: Any) -> None:
+    """
+    Get the triplet labels for the dataset.
+
+    Parameters:
+        dataset (Any): The dataset to process.
+        args (Any): Configuration object.
+    """
+    kg_manager = kgm.KGManager(dataset, args)
+    # Get triplet labels from the knowledge graph
+    dataset = kg_manager.add_labels(dataset)
+    # Save the triplet labels to a JSON file
+    dataset.write_json(f"{args.data_dir}/trip_labels.json")
+    logging.info("Finished getting trip labels")
+    return dataset
 
 def evaluate_triples(dataset: Any, args: Any) -> None:
     """
@@ -279,11 +310,17 @@ def main() -> None:
 
     # Query knowledge graphs if enabled
     if args.run_qa_kgs:
-        query_kg(dataset, args)
+        dataset = query_kg(dataset, args)
+
+    if args.filter_paths:
+        dataset = filter_paths(dataset, args)
+
+    if args.get_trip_labels:
+        dataset = get_trip_labels(dataset, args)
 
     # Evaluate triples using the LLM judge if enabled
     if args.evaluate:
-        evaluate_triples(dataset, args)
+        dataset = evaluate_triples(dataset, args)
     
     if args.test_knowledge_injection:
         ki_eval = ki.KnowledgeInjectionEval(args)

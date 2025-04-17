@@ -52,6 +52,15 @@ def remap_answer_types(answer: str):
     }
     return mappings.get(answer, const.ANS_TYPE_OTHER)
         
+def is_entity_literal(entity: str) -> bool:
+    """ can either be a numerical or date """
+    # if is date, return true
+    
+    # elif is numerical, return true
+    
+    # else return false
+    
+    raise NotImplementedError("This function is not implemented yet.")
 
 def remove_starting_pronouns(text: str):
     pronouns = ['the']

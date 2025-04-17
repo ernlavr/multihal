@@ -51,7 +51,7 @@ class DataManager(metaclass=sing.Singleton):
         elif ext == 'parquet':
             return pl.read_parquet(ds_path)
         elif ext == 'json':
-            return pl.read_json(ds_path)
+            return pl.read_json(ds_path, infer_schema_length=100000)
 
     def get_dataset(self, args=None) -> pl.DataFrame:
         """

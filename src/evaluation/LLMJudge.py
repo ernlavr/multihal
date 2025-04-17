@@ -54,33 +54,6 @@ class LLMJudge(jbc.JudgeBaseClass):
         
         return trip, score
     
-    def add_labels(self, data: pl.DataFrame):
-        _data = data.filter(~data['responses'].is_in(['N/A', "", "<NO_PATHS_FOUND>"]))
-        # add "trip_labels" column
-        _data = _data.with_columns(
-                    trip_labels=pl.lit('N/A')
-                )
-        
-        for datapoint in tqdm(_data.iter_rows(named=True), total=_data.shape[0]):
-            trips = datapoint.get('responses').split(config.LIST_SEP)
-            logging.info(f"Processing row {datapoint['id']} with triples (n={len(trips)})")
-            
-            labels = []
-            for trip in trips:
-                if len(trip) == 0: continue
-                # for each triple, decode the identifiers to labels    
-                _labels = self.kg_manager.decode_statement_labels(trip.split())
-                _labels = "; ".join(_labels)
-                labels.append(_labels)
-            
-            labels = f"{config.LIST_SEP}".join(labels)
-            datapoint['trip_labels'] = labels
-            _datapoint = pl.from_dict(datapoint, strict=False)
-            _data = _data.update(_datapoint, on="id")
-            _data.write_json(f"{self.args.data_dir}/data_kg_trip_labels.json")
-        pass
-
-
     
     def choose_best_triples(self, data: pl.DataFrame):
         logging.info("Running choose best trips")

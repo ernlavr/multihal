@@ -9,6 +9,7 @@ import src.utils.logger as log
 import src.utils.config as config
 import src.analysis.figures as figs
 import src.utils.constants as const
+import src.utils.helpers as helpers
 
 import time
 import requests
@@ -20,6 +21,7 @@ import logging
 from itertools import chain
 
 from tqdm import tqdm
+import re
 
 class KGManager():
 
@@ -62,24 +64,107 @@ class KGManager():
 
         return trip
     
-    def decode_statement_labels(self, statement: list):
+    
+    def filter_paths(self, dataset: pl.DataFrame):
+        """ Cleanup paths by removing paths which contain irrelevant properties,
+        e.g. identifiers, URLs, images, audio references..
+        """
+        irrelevant_props = uti.fill_ignore_properties("res/wd_properties_to_ignore/ids_to_remove_V2.json")
+        _RE_COMBINE_WHITESPACE = re.compile(r"\s+") # for cleaning up whitespaces
+        
+        total_paths = 0
+        after_filtering = 0
+        
+        for i, row in tqdm(enumerate(dataset.iter_rows(named=True)), "Filtering paths", total=dataset.shape[0]):
+            trips = row['responses'].split(config.LIST_SEP)
+            if trips is None or len(trips) == 0:
+                continue
+            if len(trips) == 1 and (trips[0] == "N/A" or trips[0] == "<NO_PATHS_FOUND>"):
+                continue
+        
+            # add to total paths
+            total_paths += len(trips)
+        
+            # unify any whitespace noise, remove duplicate paths
+            trips = [_RE_COMBINE_WHITESPACE.sub(" ", t).strip() for t in trips]
+            trips = list(set(trips))  # Remove duplicates
+            
+            new_paths = []
+            for trip in trips:
+                # check if path contains any of the irrelevant properties
+                if any(prop in trip for prop in irrelevant_props):
+                    continue
+                new_paths.append(trip)
+            
+            after_filtering += len(new_paths)
+            # update the row with the new paths
+            
+            
+            new_paths = f"{config.LIST_SEP}".join(new_paths)
+            row['responses'] = new_paths
+            
+            _datapoint = pl.from_dict(row, strict=False)
+            dataset = dataset.update(_datapoint, on="id")
+        
+        logging.info(f"Total paths: {total_paths}; After filtering: {after_filtering}")
+        return dataset
+    
+    def decode_statement_labels(self, statement: list, cache:dict, datapoint):
         labels = []
+        
+        literal = None
+        if datapoint['answer_type'] != const.ANS_TYPE_OTHER:
+            #statement.pop(-1) # dates/numericals have literal last position
+            literal = datapoint['output']
+        
         for entity in statement:
-            if entity.startswith('Q') and len(entity) < 14:
+            if entity in cache:
+                labels.append(cache[entity])
+                continue
+            
+            # statement box e.g. "Q76-fsa4a43-4a3-a234", entity a potential literal
+            if (e := helpers.is_entity_literal(entity)) is not None:
+                # if entity is the last element of the statement, add the literal!
+                
+                labels.append(entity)
+                continue
+            
+            elif "-" in entity:
+                idx = statement.index(entity)
+                
+                # skip the statement to linkup the path to the statement label
+                if statement[idx - 1] == statement[idx + 1]:
+                    tmp = statement.copy()
+                    statement.pop(idx - 1)
+                    statement.pop(idx - 1) # the list gets re-arranged and all elements shift to left..
+                    logging.info(f"Skipping statement: {tmp} -> {statement};")
+                    return self.decode_statement_labels(statement, cache, datapoint)
+            
+            elif entity.startswith('Q'):
                 query = qb.get_label_of_entity(entity)
                 response = self.bridge.send_message(message=query)
                 if len(response['results']['bindings']) == 0:
                     continue
                 labels.append(response['results']['bindings'][0]['label']['value'])
+                
             elif entity.startswith('P'):
                 property = self.all_properties.get(entity, None)
                 if property is not None:
                     property = property['label']
+                else:   # soft error handling, skip this whole path. This is not expected to happen though.
+                    logging.warning("Property not found in all_properties: %s" % entity)
+                    return None
                 labels.append(property)
+            else:
+                return None, cache
+            
+            cache[entity] = labels[-1]
         
         if len(statement) != len(labels):
             logging.error(f"Length of statement: {len(statement)} does not match length of labels: {len(labels)}; statement: {statement}; labels: {labels}")
-        return labels
+            
+        # lastly, add the literal back, we dont want to derive a label from it
+        return labels, cache
             
     
     def checkValidDatapoint(self, datapoint):
@@ -109,45 +194,55 @@ class KGManager():
         # Check if any text in the flattened list exists in the flattened tuple
         return any(text in flat_tup for text in flat_lst)
 
-    def get_pos_rules(self, sequences, include_children=False):
-        """ Rules to extract the entity 
-            1. No stop-words
-            2. Compare token for POS and DEP tags
-                2.1. Optionally check token parse tree for child nodes
-        """
-        output = ""
-        allowed_token_dep = ['nsubj', 'dobj', 'obj', 'iobj', 'pobj']
-        allowed_child_dep = ['amod', 'nmod', 'appos', 'compound']
-        allowed_token_pos = ['NOUN', 'PROPN']
-        output = []
-
-        for sequence in sequences:
-            for token in sequence:
-                # skip stop words
-                if token.is_stop:
-                    continue
-                # skip non-nouns
-                if token.dep_ not in allowed_token_dep and token.pos_ not in allowed_token_pos:
-                    continue
-                
-                # We're definitely adding token
-                entry = token
-
-                # add dependency modifier, i.e. adjectives, maybe adding children
-                if include_children:
-                    children = []
-                    for child in token.subtree:
-                        if child.dep_ not in allowed_child_dep or child is entry: 
-                            continue
-                        children.append(child)
-                    children.append(entry)
-                    entry = tuple(children)
-                
-                # continue if entry is already in output
-                if self.tuple_exists_by_text(output, entry): continue
-                output.append(entry)
-        return output
+    def add_labels(self, data: pl.DataFrame):
+        _data = data.filter(~data['responses'].is_in(['N/A', "", "<NO_PATHS_FOUND>"]))
+        # add "trip_labels" column
+        _data = _data.with_columns(
+                    trip_labels=pl.lit('N/A')
+                )
         
+        # control type of answers
+        # _data = _data.filter(pl.col('answer_type') == const.ANS_TYPE_OTHER)
+        
+        cache = {}
+        logging.info("Adding labels to triples")
+        
+        
+        for datapoint in tqdm(_data.iter_rows(named=True), total=_data.shape[0]):
+            trips = datapoint.get('responses').split(config.LIST_SEP)
+            logging.info(f"Processing row {datapoint['id']} with triples (n={len(trips)})")
+                        
+            labels = []
+            for trip in trips:
+                if len(trip) == 0: continue
+                trip = trip.strip()
+                # for each triple, decode the identifiers to labels    
+                _labels, cache = self.decode_statement_labels(trip.split(), cache, datapoint)
+                if _labels is None:
+                    continue
+                _labels = "; ".join(_labels)
+                labels.append(_labels)
+            
+            
+            if len(labels) != len(trips):
+                logging.error(f"Length of labels: {len(labels)} does not match length of trips: {len(trips)}; labels: {labels}; trips: {trips}. Skipping")
+                continue
+                
+            
+            labels = f"{config.LIST_SEP}".join(labels)
+            trips = f"{config.LIST_SEP}".join(trips)
+            datapoint['responses'] = trips
+            datapoint['trip_labels'] = labels
+            _datapoint = pl.from_dict(datapoint, strict=False)
+            _data = _data.update(_datapoint, on="id")
+            
+            # save
+            save_path = f"{self.args.data_dir}/data_falcon_parsed.json"
+            _data.write_json(save_path)
+            
+        logging.info(f"Trip labels saved to: {save_path}")    
+        return _data
+    
     def get_wikidata_from_wikipedia(self, wikipedia, attempts=3):
         # contexts will have the form "xxx.org/wiki/ID#any_other_further_shit"
         wikipedia_id = wikipedia.split('wiki/')[-1]
@@ -302,8 +397,6 @@ class KGManager():
         return output
                 
             
-            
-    
     def process_queryable_entities(self, entity, entity_type, timeout=60):
         if 'N/A' in entity:
             query_result = self.get_falcon_query(entity_type, timeout=30, api_mode=self.args.api_mode)
@@ -379,47 +472,6 @@ class KGManager():
             queryable_subjects,
             queryable_objects
         )
-    
-    def process_spacy_strategy(self, datapoint):
-        # make it a list, because we may have multiple sequences in the generic function
-        utterance = [self.spacy_model(datapoint['input'])]
-
-        if (t := datapoint['optional_output']) is not None: 
-            output_ents = t.split(config.LIST_SEP)
-            if datapoint['output'] not in output_ents:
-                output_ents.extend([datapoint['output']])
-            output_ents = [self.spacy_model(i) for i in output_ents]
-        else: 
-            output_ents = [self.spacy_model(datapoint['output'])]
-            
-        
-        utterance_tok = self.get_pos_rules(utterance, include_children=True)
-        output_ents_tok = self.get_pos_rules(output_ents, include_children=True)
-
-        logging.info(f"Datapoint: {datapoint['id']}")
-        logging.info(f"Input: {datapoint['input']}")
-        logging.info(f"Input Tags: {[(j.text, j.dep_) for i in utterance for j in i]}")
-        logging.info("")
-        if datapoint['optional_output'] is not None:
-            logging.info(f"Output: {datapoint['output'] + config.LIST_SEP + datapoint['optional_output']}")
-        else:
-            logging.info(f"Output: {datapoint['output']}")
-        logging.info(f"Output Tags: {[(j.text,  j.dep_) for i in output_ents for j in i]}")
-        logging.info("")
-        logging.info(f"Input Entities: {utterance_tok}")
-        logging.info(f"Output Entities: {output_ents_tok}")
-        logging.info("")
-        logging.info("")
-
-        # flatten the spacy parsing with <SEP> inbetween
-        ut = 'N/A'
-        oet = 'N/A'
-        if len(utterance_tok) is not 0:
-            ut = f"{config.LIST_SEP}".join([" ".join([ut.text for ut in uts]) for uts in utterance_tok])
-        if len(output_ents_tok) is not 0:
-            oet = f"{config.LIST_SEP}".join([" ".join([oet.text for oet in oets]) for oets in output_ents_tok])
-
-        return ut, oet
     
     def _get_kg_so_pairs(self, datapoint: dict, kg_name="wikidata", is_ans_other_type=False):
         """ Returns a list of tuples that has all pair-wise combinations between subject-object entities """
@@ -786,6 +838,7 @@ class KGManager():
                     matches.append((f'hop_{hop}', triple))
         
         return matches
+    
     
     def sort_wikidata_entities(self, entities):
         entities = [(e.getId().split('entity/')[-1], e.getLabel()) for e in entities]
