@@ -19,6 +19,7 @@ import numpy as np
 import re
 import logging
 from itertools import chain
+from collections import defaultdict
 
 from tqdm import tqdm
 import re
@@ -74,14 +75,13 @@ class KGManager():
         
         total_paths = 0
         after_filtering = 0
+        dataset = dataset.filter(~dataset['responses'].is_in(['N/A', "", "<NO_PATHS_FOUND>"]))
         
         for i, row in tqdm(enumerate(dataset.iter_rows(named=True)), "Filtering paths", total=dataset.shape[0]):
             trips = row['responses'].split(config.LIST_SEP)
             if trips is None or len(trips) == 0:
                 continue
-            if len(trips) == 1 and (trips[0] == "N/A" or trips[0] == "<NO_PATHS_FOUND>"):
-                continue
-        
+                    
             # add to total paths
             total_paths += len(trips)
         
@@ -92,9 +92,15 @@ class KGManager():
             new_paths = []
             for trip in trips:
                 # check if path contains any of the irrelevant properties
-                if any(prop in trip for prop in irrelevant_props):
-                    continue
-                new_paths.append(trip)
+                skip = False
+                for t in trip.split():
+                    if t in irrelevant_props:
+                        skip = True
+                        break
+                        
+                if skip is False:
+                    new_paths.append(trip)
+                
             
             after_filtering += len(new_paths)
             # update the row with the new paths
@@ -122,16 +128,23 @@ class KGManager():
                 labels.append(cache[entity])
                 continue
             
+            # _statement = helpers.remove_duplicate_hops(statement)
+            # if _statement != statement:
+            #     logging.info(f"Removing duplicate hops: \n{statement} \n{_statement}")
+            #     statement = _statement
+            
             # statement box e.g. "Q76-fsa4a43-4a3-a234", entity a potential literal
-            if (e := helpers.is_entity_literal(entity)) is not None:
+            if helpers.is_entity_literal(entity):
                 # if entity is the last element of the statement, add the literal!
-                
-                labels.append(entity)
+                if statement[-1] == entity:
+                    if literal is not None:
+                        labels.append(literal)
+                else:
+                    labels.append(entity)
                 continue
             
-            elif "-" in entity:
+            elif helpers.is_entity_statement(entity):
                 idx = statement.index(entity)
-                
                 # skip the statement to linkup the path to the statement label
                 if statement[idx - 1] == statement[idx + 1]:
                     tmp = statement.copy()
@@ -140,14 +153,15 @@ class KGManager():
                     logging.info(f"Skipping statement: {tmp} -> {statement};")
                     return self.decode_statement_labels(statement, cache, datapoint)
             
-            elif entity.startswith('Q'):
+            elif helpers.is_entity_object(entity):
                 query = qb.get_label_of_entity(entity)
                 response = self.bridge.send_message(message=query)
                 if len(response['results']['bindings']) == 0:
                     continue
                 labels.append(response['results']['bindings'][0]['label']['value'])
+                cache[entity] = labels[-1]
                 
-            elif entity.startswith('P'):
+            elif helpers.is_entity_property(entity):
                 property = self.all_properties.get(entity, None)
                 if property is not None:
                     property = property['label']
@@ -155,10 +169,11 @@ class KGManager():
                     logging.warning("Property not found in all_properties: %s" % entity)
                     return None
                 labels.append(property)
+                cache[entity] = labels[-1]
             else:
                 return None, cache
             
-            cache[entity] = labels[-1]
+            
         
         if len(statement) != len(labels):
             logging.error(f"Length of statement: {len(statement)} does not match length of labels: {len(labels)}; statement: {statement}; labels: {labels}")
@@ -201,33 +216,31 @@ class KGManager():
                     trip_labels=pl.lit('N/A')
                 )
         
-        # control type of answers
-        # _data = _data.filter(pl.col('answer_type') == const.ANS_TYPE_OTHER)
+        # # control type of answers
+        # _data = _data.filter(pl.col('answer_type') == const.ANS_TYPE_NUMBER)
         
         cache = {}
         logging.info("Adding labels to triples")
         
-        
         for datapoint in tqdm(_data.iter_rows(named=True), total=_data.shape[0]):
             trips = datapoint.get('responses').split(config.LIST_SEP)
             logging.info(f"Processing row {datapoint['id']} with triples (n={len(trips)})")
-                        
+            
             labels = []
-            for trip in trips:
+            
+            for trip in trips.copy(): # operate on a copy so we can remove invalid ones
                 if len(trip) == 0: continue
                 trip = trip.strip()
                 # for each triple, decode the identifiers to labels    
                 _labels, cache = self.decode_statement_labels(trip.split(), cache, datapoint)
                 if _labels is None:
+                    trips.remove(trip)
                     continue
                 _labels = "; ".join(_labels)
                 labels.append(_labels)
             
-            
             if len(labels) != len(trips):
-                logging.error(f"Length of labels: {len(labels)} does not match length of trips: {len(trips)}; labels: {labels}; trips: {trips}. Skipping")
-                continue
-                
+                logging.error(f"Length of labels: {len(labels)} does not match length of trips: {len(trips)}; \nlabels: {labels}; \ntrips: {trips}")
             
             labels = f"{config.LIST_SEP}".join(labels)
             trips = f"{config.LIST_SEP}".join(trips)
@@ -237,7 +250,7 @@ class KGManager():
             _data = _data.update(_datapoint, on="id")
             
             # save
-            save_path = f"{self.args.data_dir}/data_falcon_parsed.json"
+            save_path = f"{self.args.data_dir}/data_with_wd_labels.json"
             _data.write_json(save_path)
             
         logging.info(f"Trip labels saved to: {save_path}")    
@@ -529,7 +542,7 @@ class KGManager():
         """ Parse the response from the network bridge """
         paths = ""
         if response.get('error') is not None:
-            logging.error(f"Error in response: {response.get('error')}")
+            logging.error(f"Error in response: {response.get('error')}") 
             return paths
         
         vars = response.get("results").get("bindings")

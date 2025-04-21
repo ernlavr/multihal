@@ -16,6 +16,7 @@ import json
 import numpy as np
 import random
 import time
+import copy
 
 class API_Judge(jbc.JudgeBaseClass):
     def __init__(self, model_name, args):
@@ -45,92 +46,140 @@ class API_Judge(jbc.JudgeBaseClass):
             else:
                 mismatched.append(label)
         return output, mismatched
+    
+    def parse_api_results(self, results):
+        paths = []
+        for i in results['choices']:
+            content = i['message']['content']
+            for j in content.split("\n"):
+                if "Path:" in j:
+                    j = j.split(":")[-1].strip()
+                    if len(j) == 0: continue
+                    j = j[1:] if j[0] == '(' else j
+                    j = j[:-1] if j[-1] == ')' else j
+                    paths.append(j)
+        return paths
+    
+    def _get_best_trips(self, row, top_trips=10, num_shuffles=1):
+        q = row['input']
+        a = row['output']
+
+        
+            
+        output = []
+        for shuffle_idx in range(num_shuffles + 1):
+            trips = row.get('responses').split(config.LIST_SEP)
+            trip_labels = row.get('trip_labels').split(config.LIST_SEP)
+            mapping = {k:v for k, v in zip(trip_labels, trips)}
+            
+            assert len(trips) == len(trip_labels), f"Trip labels and trip codes do not match: {len(trips)} != {len(trip_labels)}"
+            
+            top_trips = 10
+            attempts = 0
+            temperature = self.args.llm_temp
+            evaluated_triples = []
+            while top_trips >= 1 and attempts < 2:
+                # shuffle the trip labels and codes for LLM-Judge methodology        
+                combined = list(zip(trips, trip_labels))
+                random.shuffle(combined)
+                shuffled_trips, shuffled_labels = zip(*combined)
+                shuffled_trips, shuffled_labels = list(shuffled_trips), list(shuffled_labels)
                 
+                prompt = self.get_prompt_top_triples(q, a, shuffled_labels, top_trips)
+                results = llmApi.post_api_request(self.model_name, prompt, temperature)
+                results = self.parse_api_results(results)
+                
+                # if we fail to get some results
+                if len(results) == 0:
+                    attempts += 1
+                    temperature -= 0.05
+                    continue
+                
+                # Map the results back to the originals to avoid hallucinations
+                matched, hallucinated = self.match_labels_to_trip_ids(results, mapping)
+                if len(hallucinated) > 0:
+                    logging.info(f"{row['id']}: Hallucinated labels when doing Top-{top_trips} trip extraction: hallc={len(hallucinated)}/{top_trips}; total={len(trip_labels)}")
+                
+                # remove matched out of trip_labels
+                trip_labels = [i for i in trip_labels if i not in matched]
+                evaluated_triples += matched
+                
+                # update counters and pointers
+                top_trips -= len(matched)
+                attempts += 1
+                temperature -= 0.05
+                
+            # if we're still missing, randomly sample from the remaining
+            if top_trips >= 1:
+                if len(trip_labels) > top_trips:
+                    sampled = random.sample(trip_labels, top_trips)
+                    matched, hallucinated = self.match_labels_to_trip_ids(sampled, mapping)
+                else:
+                    matched, hallucinated = self.match_labels_to_trip_ids(trip_labels, mapping)
+                evaluated_triples += matched
+            
+            
+            pairs, _ = self.match_labels_to_trip_ids(evaluated_triples, mapping)
+            selected_trips = list(pairs.keys())
+            selected_trip_labels = list(pairs.values())
+            
+            output.append({
+                "trip_labels": selected_trips,
+                "responses": selected_trip_labels,
+            })
+        
+        return output
     
     def choose_best_triples(self, data: pl.DataFrame):
         logging.info("Running choose best trips")
         tmp = data.clone()
+        intersecting_dp_count = []
+        save_path = f"{self.args.data_dir}/llm_judge_trip_sel_{self.model_name.replace('/', '-')}.json"
+        # get processable datapoints
         
         for row in tqdm(tmp.iter_rows(named=True), total=len(tmp)):
-            # for each row, get the possible tripples
-            q = row['input']
-            a = row['output']
-            trips = row.get('responses').split(config.LIST_SEP)
-            trips, trip_labels = self.filter_circular_trips(row)
-            mapping = {k:v for k, v in zip(trip_labels, trips)}
-            
-            # use llm judge to get the most relevant ones
             top_trips = 10
-            evaluated_triples = []
-            if len(trips) > top_trips:
-                attempts = 0
-                temperature = self.args.llm_temp
-                while top_trips > 1 and attempts < 2:
-                    # prompt LLM
-                    prompt = self.get_prompt_top_triples(q, a, trip_labels, top_trips)
-                    results = llmApi.post_api_request(self.model_name, prompt, temperature)
-                    
-                    _triples = []
-                    for i in results['choices']:
-                        content = i['message']['content']
-                        for j in content.split("\n"):
-                            if "Triple:" in j:
-                                j = j.split(":")[-1].strip()
-                                if len(j) == 0: continue
-                                j = j[1:] if j[0] == '(' else j
-                                j = j[:-1] if j[-1] == ')' else j
-                                _triples.append(j)
-                    
-                    if len(_triples) == 0:
-                        attempts += 1
-                        continue
-                    
-                    # Map the results back to the originals to avoid hallucinations
-                    matched, hallucinated = self.match_labels_to_trip_ids(results, mapping)
-                    if len(hallucinated) > 0:
-                        logging.info(f"{row['id']}: Hallucinated labels when doing Top-{top_trips} trip extraction: hallc={len(hallucinated)}/{top_trips}; total={len(trip_labels)}")
-                    
-                    # remove matched out of trip_labels
-                    trip_labels = [i for i in trip_labels if i not in matched]
-                    evaluated_triples += matched
-                    
-                    # update counters and pointers
-                    top_trips -= len(matched)
-                    attempts += 1
-                    temperature -= 0.1
-                    
-                # if we're still missing, randomly sample from the remaining
-                if top_trips > 1:
-                    if len(trip_labels) > top_trips:
-                        sampled = random.sample(trip_labels, top_trips)
-                        matched, hallucinated = self.match_labels_to_trip_ids(sampled, mapping)
-                    else:
-                        matched, hallucinated = self.match_labels_to_trip_ids(trip_labels, mapping)
-                    evaluated_triples += matched
-                
-                
-                pairs, _ = self.match_labels_to_trip_ids(evaluated_triples, mapping)
-                trip_labels = list(pairs.keys())
-                trips = list(pairs.values())
+            if len(row['responses'].split(config.LIST_SEP)) <= top_trips:
+                continue
             
-            trip_labels = f" {config.LIST_SEP} ".join(trip_labels)
-            trips = f" {config.LIST_SEP} ".join(trips)
+            best_trips = self._get_best_trips(row, num_shuffles=1)
+            intersection = set(best_trips[0]['trip_labels']).intersection(set(best_trips[1]['trip_labels']))
+            intersecting_dp_count.append(len(intersection))
+            
+            # get corresponding trips that match the intersection
+            trips = []
+            trip_labels = []
+            for i in intersection:
+                idx = best_trips[0]['trip_labels'].index(i)
+                trips.append(best_trips[0]['responses'][idx])
+                trip_labels.append(best_trips[0]['trip_labels'][idx])
+                
+            
+            trip_labels = f"{config.LIST_SEP}".join(trip_labels)
+            trips = f"{config.LIST_SEP}".join(trips)
             
             row['responses'] = trips
             row['trip_labels'] = trip_labels
             
             updated_datapoint = pl.from_dict(row, strict=False)
             data = data.update(updated_datapoint, on="id")
-            data.write_json(f"{self.args.data_dir}/llm_judge_results_{self.model_name.replace('/', '-')}_top_trips_int.json")
+            data.write_json(save_path.replace(".json", "_step.json"))
         
-        data.write_json(f"{self.args.data_dir}/llm_judge_results_{self.model_name.replace('/', '-')}_top_trips.json")
+        data.write_json(save_path)
+        logging.info(f"Intersecting datapoints (dp={len(intersecting_dp_count)} / {len(tmp)}): mean={np.mean(intersecting_dp_count)}; std={np.std(intersecting_dp_count)}")
+        logging.info(f"Saved to {save_path}")
         return data
         
     def evaluate_triple_relevance(self, data: pl.DataFrame):
         # filter out rows which have no triples
         logging.info("Running choose best trips")
         tmp = data.clone()
-        output = self.get_results_df()
+        output = pl.DataFrame(schema=tmp.schema)
+        output = output.with_columns([
+            pl.lit("").alias("judged_by"),
+            pl.lit(None, dtype=pl.Int32).alias("judged_score")
+        ])
+        save_path = f"{self.args.data_dir}/llm_judge_trip_rate_{self.model_name.replace('/', '-')}.json"
         
         for row in tqdm(tmp.iter_rows(named=True), total=len(tmp)):
             # for each row, get the possible tripples
@@ -147,7 +196,7 @@ class API_Judge(jbc.JudgeBaseClass):
             trips = zip(trip_labels, trip_codes)
             logging.info(f"Processing row {row['id']} with triples (n={len(trip_codes)})")
             
-            for label, code in trips:
+            for idx, (label, code) in enumerate(trips):
                 if len(label) == 0: continue
                 # for each triple, decode the identifiers to labels    
                 # labels = self.kg_manager.decode_statement_labels(trip.split())
@@ -160,6 +209,10 @@ class API_Judge(jbc.JudgeBaseClass):
                 
                 score = -1
                 for i in request_response['choices']:
+                    if len(request_response['choices']) > 1:
+                        logging.error(f"{row['id']}: More than 1 response from LLM: {len(request_response['choices'])}")
+                        continue
+                    
                     content = i['message']['content'].lower()
                     if "score:" not in content.lower():
                         logging.info(f"{row['id']}: Failed to parse score: {content}")
@@ -173,27 +226,19 @@ class API_Judge(jbc.JudgeBaseClass):
                     except:
                         logging.error(f"{row['id']}: Failed to parse score: {content}")
                         score = -1
-                        
                 
-                entry = jbc.JudgeEvalResult(
-                    id=row['id'],
-                    source_dataset=row['source_dataset'],
-                    task=row['task'],
-                    domain=row['domain'],
-                    input=q,
-                    output=a,
-                    responses=code,
-                    trip_labels=label,
-                    judged_by=self.model_name,
-                    judged_label="N/A",
-                    judged_score=score
-                )
+                entry = copy.deepcopy(row)
+                entry['id'] = f"{entry['id']}_{idx}"
+                entry['judged_by'] = self.model_name
+                entry['judged_score'] = score
+                entry['responses'] = code
+                entry['trip_labels'] = label
                 
                 # save the output to a dict
                 output = self.add_result(entry, output)
-            output.write_json(f"{self.args.data_dir}/llm_judge_trip_eval_{self.model_name.replace('/', '-')}_int.json")
+            output.write_json(save_path.replace(".json", "_step.json"))
         
-        output.write_json(f"{self.args.data_dir}/llm_judge_trip_eval_{self.model_name.replace('/', '-')}_final.json")
+        output.write_json(save_path)
         return output
     
     def evaluate(self, data):

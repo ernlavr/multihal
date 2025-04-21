@@ -7,6 +7,7 @@ from datetime import datetime
 import src.utils.helpers as hlp
 import src.utils.constants as const
 import string
+import re
 
 
 def parse_flexible_date(date_str):
@@ -54,13 +55,55 @@ def remap_answer_types(answer: str):
         
 def is_entity_literal(entity: str) -> bool:
     """ can either be a numerical or date """
-    # if is date, return true
+    is_literal = False
+    if '-' in entity: # could be a date
+        date = parse_flexible_date(entity)
+        is_literal = date is not None
+    else:
+        number = ''.join([i for i in entity if i.isalpha() or i.isdigit()])
+        is_literal = number.isdigit()
+    return is_literal
     
-    # elif is numerical, return true
+def remove_duplicate_hops(lst):
+    # Group elements into hops of size 2 (predicate, object)
+    hops = [tuple(lst[i:i+2]) for i in range(1, len(lst), 2)]
     
-    # else return false
+    # Use a set to track seen hops
+    seen = set()
+    unique_hops = []
     
-    raise NotImplementedError("This function is not implemented yet.")
+    for hop in hops:
+        if hop not in seen:
+            seen.add(hop)
+            unique_hops.extend(hop)
+
+    # Prepend the subject (assuming it's the first element)
+    return [lst[0]] + unique_hops
+    
+def is_entity_statement(entity: str) -> bool:
+    """ can either be a numerical or date """
+    # normally it starts withj Q, has hash strings seperated by -
+    is_statement = False
+    if entity.lower().startswith("Q") and '-' in entity:
+        is_statement = True
+    return is_statement
+
+def is_entity_object(entity: str) -> bool:
+    """ can either be a numerical or date """
+    object_regex = r'^Q\d+' # Q followed by digits
+    is_object = False
+    if re.match(object_regex, entity):
+        is_object = True
+    return is_object
+
+def is_entity_property(entity: str) -> bool:
+    """ can either be a numerical or date """
+    object_regex = r'^P\d+' # P followed by digits
+    is_property = False
+    if re.match(object_regex, entity):
+        is_property = True
+    return is_property
+
 
 def remove_starting_pronouns(text: str):
     pronouns = ['the']

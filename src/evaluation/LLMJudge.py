@@ -10,7 +10,7 @@ import src.kgs.kg_manager as kgm
 import re
 import transformers
 import src.evaluation.JudgeBaseClass as jbc
-
+import random
 
 class LLMJudge(jbc.JudgeBaseClass):
     def __init__(self, model_name, args):
@@ -66,11 +66,21 @@ class LLMJudge(jbc.JudgeBaseClass):
             q = row['input']
             a = row['output']
             trips = row.get('responses').split(config.LIST_SEP)
-            trips, trip_labels = self.filter_circular_trips(row)
+            trip_labels = row.get('trip_labels').split(config.LIST_SEP)
+            
+            combined = list(zip(trips, trip_labels))
+            random.shuffle(combined)
+            
+            shuffled_trips, shuffled_labels = zip(*combined)
+            shuffled_trips, shuffled_labels = list(shuffled_trips), list(shuffled_labels)
             
             # run inference on the triples' relevance to the question with respect to the expected answer
             prompt = self.get_prompt_top_triples(q, a, trip_labels)
             result = self.pipeline(prompt)
+            
+            prompt_shuffled = self.get_prompt_top_triples(q, a, shuffled_labels)
+            result_shuffled = self.pipeline(prompt_shuffled)
+            
             try:
                 trip, score = self.extract_relevance_confidence(result)
             except:
@@ -94,7 +104,8 @@ class LLMJudge(jbc.JudgeBaseClass):
             output.write_json(f"{output_path}_top_trips_int.json")
         
         logging.info(f"Processed entities: {len(unprocessed_ents)}/{len(data)}")
-        output.write_json(f"{output_path}_top_trips.json")
+        save_path = f"{self.args.data_dir}/llm_judge_trip_selection{self.model_name.replace('/', '-')}.json"
+        output.write_json(save_path)
         return output
         
     def evaluate_triple_relevance(self, data: pl.DataFrame):

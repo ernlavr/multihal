@@ -206,8 +206,6 @@ def get_trip_labels(dataset: Any, args: Any) -> None:
     kg_manager = kgm.KGManager(dataset, args)
     # Get triplet labels from the knowledge graph
     dataset = kg_manager.add_labels(dataset)
-    # Save the triplet labels to a JSON file
-    dataset.write_json(f"{args.data_dir}/trip_labels.json")
     logging.info("Finished getting trip labels")
     return dataset
 
@@ -228,8 +226,10 @@ def evaluate_triples(dataset: Any, args: Any) -> None:
     else:
         raise ValueError(f"Unknown LLM judge method: {args.llm_judge_method}")
     
-    # _ds = judge.choose_best_triples(dataset)
-    judge.evaluate_triple_relevance(dataset)
+    dataset = judge.choose_best_triples(dataset)
+    dataset = judge.evaluate_triple_relevance(dataset)
+    
+    return dataset
     
     # # judge.add_labels(dataset)
     # outputs, relevances = judge.evaluate_triple_relevance(dataset)

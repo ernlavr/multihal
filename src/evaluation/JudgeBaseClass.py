@@ -15,7 +15,6 @@ class JudgeEvalResult:
     responses: str          # wikidata paths
     trip_labels: str        # wikidata path labels
     judged_by: str          # model name
-    judged_label: str       # yes, no, unsure
     judged_score: pl.Int32     # 0-1
 
 
@@ -27,8 +26,8 @@ class JudgeBaseClass(ABC):
         output = pl.DataFrame(schema=schema)
         return output
     
-    def add_result(self, result: JudgeEvalResult, df: pl.DataFrame) -> pl.DataFrame:
-        result_df = pl.from_dict(result.__dict__, schema=JudgeEvalResult.__annotations__)
+    def add_result(self, result: dict, df: pl.DataFrame) -> pl.DataFrame:
+        result_df = pl.from_dict(result, schema=df.schema)
         return pl.concat([df, result_df])
     
     def filter_circular_trips(self, data: pl.DataFrame):
@@ -50,52 +49,50 @@ class JudgeBaseClass(ABC):
         
     def get_prompt_triple_relevance(self, question, answer, triple):
         """ Returns the prompt for the LLM to evaluate the relevance of the triple to the question and answer """
+        # weird indenting is for formatting
         messages = [
-            {"role": "system", "content": r"""Score the given Wikidata Knowledge Graph triple on how informative and relevant it is with respect to the given answer and question.
-            Give me your output in YAML format with a given score in Likert scale from 1 to 5.
-            1 - Very poor. Completley unrelated triple 
-            2 - Poor. Syntactic overlap may exist between the triplet and question/answer but semantics are different
-            3 - Normal. Syntactic overlap touching upon some semantics. Could be usable as a starting point for information support.
-            4 - Good. Implicitly supports the answer given the question
-            5 - Excellent. Directly addresses the question.
-            
-            The triples can have multiple hops where the object and subject alternates with predicates seperating them.
-            Each triple is contained within parenthesis and whole triples are seperated by a semicolon.
-            
-            Here is an expected format of the input:
-            Question: What is the capital of France?
-            Answer: Paris
-            Triples: (France, capital, Paris);
-            
-            Your output needs to be only the score, no explanation or justification is needed. Example:
-            Score: 5
-            """},
-            {"role": "user", "content": f"Question: {question}; \nAnswer: {answer}; \nTriple: ({triple})"},
+            {"role": "system", "content": f"""Score the given Wikidata Knowledge Graph path on how informative and relevant it is with respect to the given answer and question.
+Give me your output in YAML format with a given score in Likert scale from 1 to 5.
+1 - Very poor. Completley unrelated path.
+2 - Poor. Syntactic overlap may exist between the path and question/answer but semantics are different.
+3 - Normal. Syntactic overlap exists touching upon some semantics. Could be usable as a starting point for information support, but not directly related to the question without knowing the answer.
+4 - Good. Question can be implicitly answered with the path.
+5 - Excellent. Directly addresses the question.
+
+The path can have multiple hops where the entities are connected predicates seperating them.
+Entities and predicates are seperated by commas and the path is contained within parenthesis.
+
+Here is an expected format of the input:
+Question: What is the capital of France?
+Answer: Paris
+Path: (France, capital, Paris)
+
+Your output needs to be only the score, no explanation or justification is needed. Example:
+Score: 5"""},
+            {"role": "user", "content": f"Question: {question}; \nAnswer: {answer}; \Path: ({triple})"},
         ]
         return messages
     
     def get_prompt_top_triples(self, question, answer, triples, num_triples=10):
         """ Returns the prompt for the LLM to evaluate the relevance of the triple to the question and answer """
-        triples = [f"({triple})" for triple in triples]
-        triples = "; ".join(triples)
+        triples = " | ".join(triples)
         messages = [
-            {"role": "system", "content": f"""From the given Wikidata Knowledge Graphs triples, you need to select the Top {num_triples} most relevant triples that are informative and relevant with respect to the given answer and question.
-            The triples can have multiple hops where the object and subject alternates with predicates seperating them.
-            Each triple is contained within parenthesis and whole triples are seperated by a semicolon.
-            
-            Here is an expected format of the input:
-            Question: What is the capital of France?
-            Answer: Paris
-            Triples: (France, capital, Paris); (Microsoft, founder, Bill Gates)
-            
-            Here is an expected format of the output:
-            ```yml
-            Triple: France, capital, Paris
-            Triple: Microsoft, founder, Bill Gates
-            ```
-            
-            """},
-            {"role": "user", "content": f"Question: {question}; \nAnswer: {answer}; \nTriples: {triples}"},
+            {"role": "system", "content": f"""From the given Wikidata Knowledge Graph paths, you need to select the Top {num_triples} most relevant paths that are informative and relevant with respect to answering the given question.
+The paths can have multiple hops where the entities alternate with predicates seperating them.
+Each path is seperated by pipe symbol (|) and the entities and predicates are seperated by semicolon.
+
+The number of paths can vary but here is an example of the input:
+Question: What is the capital of France?
+Answer: Paris
+Paths: France; capital; Paris | Microsoft; founder; Bill Gates | Napoleon; residence; Paris; capital of; France
+
+Here is an expected format of the output:
+```yml
+Path: France; capital; Paris
+Path: Napoleon; residence; Paris; capital of; France
+```"""
+            },
+            {"role": "user", "content": f"Question: {question}; \nAnswer: {answer}; \Paths: {triples}"},
         ]    
         return messages
     
