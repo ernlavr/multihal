@@ -39,7 +39,7 @@ class KGManager():
         
         # Logging
         self.ignore_properties = uti.fill_ignore_properties("res/wd_properties_to_ignore/ids_to_remove.json")
-        self.all_properties = uti.fill_all_properties('res/wd_properties_to_ignore/properties.json')
+        self.all_properties = uti.fill_all_properties('res/wd_properties_to_ignore/props_v2.json')
 
         # Matches <QXXX> where XXX is arbitray amount of numbers
         self.obj_regex = lambda x : bool(re.match(r"^Q\d+$", x))
@@ -167,7 +167,7 @@ class KGManager():
                     property = property['label']
                 else:   # soft error handling, skip this whole path. This is not expected to happen though.
                     logging.warning("Property not found in all_properties: %s" % entity)
-                    return None
+                    return None, cache
                 labels.append(property)
                 cache[entity] = labels[-1]
             else:
