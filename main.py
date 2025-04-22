@@ -226,8 +226,11 @@ def evaluate_triples(dataset: Any, args: Any) -> None:
     else:
         raise ValueError(f"Unknown LLM judge method: {args.llm_judge_method}")
     
-    dataset = judge.choose_best_triples(dataset)
-    dataset = judge.evaluate_triple_relevance(dataset)
+    if args.select_labels:
+        dataset = judge.choose_best_triples(dataset)
+    
+    if args.rank_labels:
+        dataset = judge.evaluate_triple_relevance(dataset)
     
     return dataset
     
@@ -319,7 +322,10 @@ def main() -> None:
         dataset = get_trip_labels(dataset, args)
 
     # Evaluate triples using the LLM judge if enabled
-    if args.evaluate:
+    if args.select_labels:
+        dataset = evaluate_triples(dataset, args)
+    
+    if args.rank_labels:
         dataset = evaluate_triples(dataset, args)
     
     if args.test_knowledge_injection:
