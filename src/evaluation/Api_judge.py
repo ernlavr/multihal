@@ -80,10 +80,8 @@ class API_Judge(jbc.JudgeBaseClass):
             evaluated_triples = []
             while top_trips >= 1 and attempts < 2:
                 # shuffle the trip labels and codes for LLM-Judge methodology        
-                combined = list(zip(trips, trip_labels))
-                random.shuffle(combined)
-                shuffled_trips, shuffled_labels = zip(*combined)
-                shuffled_trips, shuffled_labels = list(shuffled_trips), list(shuffled_labels)
+                shuffled_labels = trip_labels.copy()
+                random.shuffle(shuffled_labels)
                 
                 prompt = self.get_prompt_top_triples(q, a, shuffled_labels, top_trips)
                 results = llmApi.post_api_request(self.model_name, prompt, temperature)
@@ -136,6 +134,7 @@ class API_Judge(jbc.JudgeBaseClass):
         intersecting_dp_count = []
         save_path = f"{self.args.data_dir}/llm_judge_trip_sel_{self.model_name.replace('/', '-')}.json"
         # get processable datapoints
+        tmp = tmp.filter()
         
         for row in tqdm(tmp.iter_rows(named=True), total=len(tmp)):
             top_trips = 10
