@@ -126,25 +126,42 @@ class GlobalConfig(metaclass=singl.Singleton):
             subset_sample_size=None,
             
             # Control
-            debug_mode=True,                # Debug mode
+            debug_mode=True,                   # Debug mode
             n_pds=None,                        # Number of datapoints to sample for debugging
             gen_anlyz_figs=False,           
             gen_sent_embeds=False,
             wandb_online=False,
-            sent_sim_metric=None,           # string, either 'bleu' or 'cosine'
-            remove_duplicates=False,
-            parse_text_to_ents=False,
-            run_qa_kgs=False,
-            rank_labels=False,                  # LLM judge for ranking labels
-            select_labels=False,                # LLM judge for selecting top labels
-            test_knowledge_injection=False,  # Test the knowledge injection
+            
+                # Preprocessing
             remove_refused_answers=False,
+            sent_sim_metric=None,           # string, either 'bleu' or 'cosine'
+            remove_duplicates=False,        # removes duplicates based on sentence embedding model
+            
+                # Entity matching
+            parse_text_to_ents=False,        # parses text to wikidata entities with Falcon2.0
             api_mode='short',                # string, either 'long' or 'short' for Falcon2.0 mode
-            llm_judge_method=None,  # string, either 'proprietary' or 'deepeval'
-            knowledge_inj_task=None,        # string, either 'grag', 'rag' or 'qa'
+            
+                # Query wikidata
+            run_qa_kgs=False,
+
+                # Knowledge Injection, baseline experiments
+            knowledge_inj_task=None,         # string, either 'grag', 'rag' or 'qa'
+            test_knowledge_injection=False,  # Test the knowledge injection
+            
+                # LLM Judge
+            llm_judge_method=None,          # string, either 'proprietary' or 'deepeval'
             get_trip_labels=None,           # for retrieving labels from WD. 99% of time enable filter_paths
             filter_paths=None,              # to clean up KG paths (remove unnecessary ones, unify whitespacing)
+            rank_labels=False,              # LLM judge for ranking labels
+            select_labels=False,            # LLM judge for selecting top labels
+            llm_judge_model=None,           # model definition for LLM-as-judge
+            llm_temp=0.3,                   # temperature for LLM-as-judge
             
+                # Paraphrasings
+            generate_paraphrasings=None,    # bool, whether to generate paraphrasings
+            num_paraphrasings=None,         # int, number of paraphrasings to generate
+            
+            # Dataset/state loading
             load_premade_dataset=None,      # string, path to a premade dataset
             continue_from_previous_state=None, # dict {RUN_ID: str, dataset: str, functions: list}
             load_score_dataset=None,        # string, path to a dataset with scores for KI injection
@@ -156,8 +173,6 @@ class GlobalConfig(metaclass=singl.Singleton):
 
             # Model
             sentence_embedder="sentence-transformers/sentence-t5-base", # HuggingFace or local path
-            llm_judge_model=None,                                       # model definition for LLM-as-judge
-            llm_temp=0.3,                                               # temperature for LLM-as-judge
             )
 
     def load_yaml(self, config_args: dict) -> dict:
