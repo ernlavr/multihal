@@ -146,12 +146,11 @@ class KGManager():
             elif helpers.is_entity_statement(entity):
                 idx = statement.index(entity)
                 # skip the statement to linkup the path to the statement label
-                if statement[idx - 1] == statement[idx + 1]:
-                    tmp = statement.copy()
-                    statement.pop(idx - 1)
-                    statement.pop(idx - 1) # the list gets re-arranged and all elements shift to left..
-                    logging.info(f"Skipping statement: {tmp} -> {statement};")
-                    return self.decode_statement_labels(statement, cache, datapoint)
+                tmp = statement.copy()
+                statement.pop(idx - 1)
+                statement.pop(idx - 1) # the list gets re-arranged and all elements shift to left..    
+                logging.info(f"Skipping statement: {tmp} -> {statement};")
+                return self.decode_statement_labels(statement, cache, datapoint)
             
             elif helpers.is_entity_object(entity):
                 query = qb.get_label_of_entity(entity)
@@ -167,19 +166,24 @@ class KGManager():
                     property = property['label']
                 else:   # soft error handling, skip this whole path. This is not expected to happen though.
                     logging.warning("Property not found in all_properties: %s" % entity)
-                    return None, cache
+                    return statement, None, cache
                 labels.append(property)
                 cache[entity] = labels[-1]
             else:
-                return None, cache
+                return statement, None, cache
             
-            
+        # hacky way to remove duplicate tails, e.g. p585 16 p585 16
+        if len(labels) > 4 and labels[-1] == labels[-3] and labels[-2] == labels[-4]:
+            labels.pop(-1)
+            labels.pop(-1)
+            statement.pop(-1)
+            statement.pop(-1)
         
         if len(statement) != len(labels):
             logging.error(f"Length of statement: {len(statement)} does not match length of labels: {len(labels)}; statement: {statement}; labels: {labels}")
             
         # lastly, add the literal back, we dont want to derive a label from it
-        return labels, cache
+        return statement, labels, cache
             
     
     def checkValidDatapoint(self, datapoint):
@@ -213,7 +217,8 @@ class KGManager():
         _data = data.filter(~data['responses'].is_in(['N/A', "", "<NO_PATHS_FOUND>"]))
         # add "trip_labels" column
         _data = _data.with_columns(
-                    trip_labels=pl.lit('N/A')
+                    trip_labels=pl.lit('N/A'),
+                    responses_formatted=pl.lit('N/A')
                 )
         
         # # control type of answers
@@ -227,24 +232,26 @@ class KGManager():
             logging.info(f"Processing row {datapoint['id']} with triples (n={len(trips)})")
             
             labels = []
-            
+            trips_formatted = []
             for trip in trips.copy(): # operate on a copy so we can remove invalid ones
                 if len(trip) == 0: continue
                 trip = trip.strip()
                 # for each triple, decode the identifiers to labels    
-                _labels, cache = self.decode_statement_labels(trip.split(), cache, datapoint)
+                _trips_formatted, _labels, cache = self.decode_statement_labels(trip.split(), cache, datapoint)
                 if _labels is None:
                     trips.remove(trip)
                     continue
                 _labels = "; ".join(_labels)
+                _trips_formatted = " ".join(_trips_formatted)
                 labels.append(_labels)
+                trips_formatted.append(_trips_formatted)
             
             if len(labels) != len(trips):
                 logging.error(f"Length of labels: {len(labels)} does not match length of trips: {len(trips)}; \nlabels: {labels}; \ntrips: {trips}")
             
             labels = f"{config.LIST_SEP}".join(labels)
-            trips = f"{config.LIST_SEP}".join(trips)
-            datapoint['responses'] = trips
+            trips_formatted = f"{config.LIST_SEP}".join(trips_formatted)
+            datapoint['responses_formatted'] = trips_formatted
             datapoint['trip_labels'] = labels
             _datapoint = pl.from_dict(datapoint, strict=False)
             _data = _data.update(_datapoint, on="id")

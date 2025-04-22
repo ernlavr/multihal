@@ -84,7 +84,7 @@ def is_entity_statement(entity: str) -> bool:
     """ can either be a numerical or date """
     # normally it starts withj Q, has hash strings seperated by -
     is_statement = False
-    if entity.lower().startswith("Q") and '-' in entity:
+    if entity.lower().startswith("q") and '-' in entity:
         is_statement = True
     return is_statement
 
