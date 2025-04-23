@@ -190,7 +190,7 @@ class API_Judge(jbc.JudgeBaseClass):
                 a = [a] + opt_a
             # trips = row.get('responses').split(config.LIST_SEP)
             trip_labels = row.get('trip_labels').split(config.LIST_SEP)
-            trip_codes = row.get('responses').split(config.LIST_SEP)
+            trip_codes = row.get('responses_formatted').split(config.LIST_SEP)
             
             trips = zip(trip_labels, trip_codes)
             logging.info(f"Processing row {row['id']} with triples (n={len(trip_codes)})")
@@ -230,7 +230,7 @@ class API_Judge(jbc.JudgeBaseClass):
                 entry['id'] = f"{entry['id']}_{idx}"
                 entry['judged_by'] = self.model_name
                 entry['judged_score'] = score
-                entry['responses'] = code
+                entry['responses_formatted'] = code
                 entry['trip_labels'] = label
                 
                 # save the output to a dict

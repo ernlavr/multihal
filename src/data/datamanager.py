@@ -22,14 +22,23 @@ class DataManager(metaclass=sing.Singleton):
 
         if args.continue_from_previous_state is None and args.load_premade_dataset is None:
             self.ds = dl.load_data(args)
-            self.merge_data()
+            self.df, self.df_pp = self.merge_data(self.ds)
             self.serialize_ds()
         else:
             self.df = self.get_premade_dataset(args)
             
         logging.info(f"Parsed dataset of size: {self.df.shape[0]}")
+    
+    
+    def get_df_pp(self):
+        if self.df_pp.shape[0] > 0:
+            return self.df_pp
         
+        tmp = dl.load_data(self.args)
+        _, self.df_pp = self.merge_data(tmp)
+        return self.df_pp
         
+            
 
     def get_premade_dataset(self, args):
         # get extension
@@ -130,7 +139,7 @@ class DataManager(metaclass=sing.Singleton):
         return data
             
     
-    def merge_data(self):
+    def merge_data(self, loaded_datasets):
         merge_funcs = {
             'shroom2024': self.column_mapper.merge_shroom2024,
             'shroom2025': self.column_mapper.merge_shroom2025,
@@ -141,19 +150,23 @@ class DataManager(metaclass=sing.Singleton):
             'defan': self.column_mapper.merge_defan,
             'simpleqa': self.column_mapper.merge_simpleqa,
         }
+        
+        df = self.column_mapper.get_blank_df()
+        df_pp = self.column_mapper.get_blank_df()
 
         for ds in self.args.datasets:
             # assert len(self.ds[ds].keys()) == 1, "Only one split per dataset is supported"
-            for split in list(self.ds[ds].keys()):
+            for split in list(loaded_datasets[ds].keys()):
                 if 'paraphrased' in split:
-                    self.df_pp = merge_funcs[ds](self.df_pp, self.ds[ds][split].to_polars())
+                    df_pp = merge_funcs[ds](df_pp, loaded_datasets[ds][split].to_polars())
                 else:
-                    self.df = merge_funcs[ds](self.df, self.ds[ds][split].to_polars())
+                    df = merge_funcs[ds](df, loaded_datasets[ds][split].to_polars())
 
 
         # remove where output is None
-        self.df = self.df.filter(~pl.col("output").is_null())
-        self.df = self.df.with_columns(pl.col('domain').str.to_lowercase())
+        df = df.filter(~pl.col("output").is_null())
+        df = df.with_columns(pl.col('domain').str.to_lowercase())
         # fill in missing values
-        self.df = self.df.with_columns(pl.col("domain").replace(None, "N/A"))
-        self.df = self.column_mapper.encode_domains(self.df)
+        df = df.with_columns(pl.col("domain").replace(None, "N/A"))
+        df = self.column_mapper.encode_domains(df)
+        return df, df_pp

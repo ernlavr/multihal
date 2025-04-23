@@ -19,6 +19,7 @@ import numpy as np
 import wandb
 
 import src.data.datamanager as dm
+import src.data.paraphraser as pp
 import src.utils.config as config
 import src.utils.wandb_manager as wbMang
 import src.analysis.analyser as anlyz
@@ -275,6 +276,7 @@ def main() -> None:
     analyzer = None
     dataset = data_manager.get_dataset(args)
     dataset = data_manager.cleanup(dataset)
+    dataset_pp = None
     logging.info(f"Dataset length: {dataset.shape[0]}")
     
     # DEBUG: get only datapoints with answer_type == "date"
@@ -327,6 +329,9 @@ def main() -> None:
     
     if args.rank_labels:
         dataset = evaluate_triples(dataset, args)
+    
+    if args.generate_paraphrasings:
+        _, dataset_pp = pp.Paraphraser(args).generate_paraphrasings(dataset, data_manager.get_df_pp())
     
     if args.test_knowledge_injection:
         ki_eval = ki.KnowledgeInjectionEval(args)
