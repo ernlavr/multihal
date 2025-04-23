@@ -88,6 +88,14 @@ def is_entity_statement(entity: str) -> bool:
         is_statement = True
     return is_statement
 
+def is_entity_hash(entity: str) -> bool:
+    """ can either be a numerical or date """
+    # normally it starts withj Q, has hash strings seperated by -
+    is_hash = False
+    if len(entity) > 20:
+        is_hash = True
+    return is_hash
+
 def is_entity_object(entity: str) -> bool:
     """ can either be a numerical or date """
     object_regex = r'^Q\d+' # Q followed by digits

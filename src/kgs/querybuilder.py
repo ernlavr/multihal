@@ -152,7 +152,9 @@ def get_label_of_entity(entity):
         {_define_prefixes()}
         select * where {{
             wd:{entity} rdfs:label ?label .
-            FILTER (langMatches( lang(?label), "EN" ) )
+            FILTER (
+                LANG(?label) = "en" || LANG(?label) = "mul"
+            )
         }} 
         LIMIT 1
         """

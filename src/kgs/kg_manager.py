@@ -20,9 +20,11 @@ import re
 import logging
 from itertools import chain
 from collections import defaultdict
+import os
 
 from tqdm import tqdm
 import re
+import pickle
 
 class KGManager():
 
@@ -136,23 +138,54 @@ class KGManager():
             # statement box e.g. "Q76-fsa4a43-4a3-a234", entity a potential literal
             if helpers.is_entity_literal(entity):
                 # if entity is the last element of the statement, add the literal!
-                if statement[-1] == entity:
-                    if literal is not None:
-                        labels.append(literal)
-                else:
-                    labels.append(entity)
+                labels.append(entity)
                 continue
             
             elif helpers.is_entity_statement(entity):
                 idx = statement.index(entity)
-                # skip the statement to linkup the path to the statement label
+                # skip the statement to linkup the path to the statement label            
                 tmp = statement.copy()
-                statement.pop(idx - 1)
-                statement.pop(idx - 1) # the list gets re-arranged and all elements shift to left..    
-                logging.info(f"Skipping statement: {tmp} -> {statement};")
-                return self.decode_statement_labels(statement, cache, datapoint)
+                if tmp[idx - 1] == tmp[-2]:
+                    # remove the statement from the list
+                    tmp[idx] = tmp[-1]
+                    tmp = tmp[:-2]
+                elif tmp[idx - 1] == tmp[-3]:
+                    unit = tmp[-1]
+                    
+                    # get unit label
+                    unit_label = cache.get(unit, unit)
+                    if unit_label.startswith('Q'):
+                        query = qb.get_label_of_entity(unit)
+                        response = self.bridge.send_message(message=query)
+                        if len(response['results']['bindings']) == 0:
+                            continue
+                        unit_label = response['results']['bindings'][0]['label']['value']
+                        cache[unit] = unit_label
+                    
+                    tmp[idx] = tmp[-2] + f"({unit_label})"
+                    tmp = tmp[:-3]
+                    tmp.append(unit)
+                else:
+                    tmp.pop(idx - 1)
+                    tmp.pop(idx - 1) # the list gets re-arranged and all elements shift to left..    
+                    tmp[idx] = tmp[idx]
+                logging.info(f"Converting statement: {statement} -> {tmp};")
+                return self.decode_statement_labels(tmp, cache, datapoint)
+            
+            elif helpers.is_entity_hash(entity):
+                idx = statement.index(entity)
+                tmp = statement.copy()
+                if (tmp[-1] == entity) or tmp[idx - 1] == tmp[idx + 1]:
+                    tmp.pop(idx - 1)
+                    tmp.pop(idx - 1) # the list gets re-arranged and all elements shift to left..   
+                    return self.decode_statement_labels(tmp, cache, datapoint)
+                else:
+                    return statement, None, cache
+
             
             elif helpers.is_entity_object(entity):
+                if entity.endswith(';'): # remove the semicolon for the query
+                    entity = entity[:-1]
                 query = qb.get_label_of_entity(entity)
                 response = self.bridge.send_message(message=query)
                 if len(response['results']['bindings']) == 0:
@@ -173,16 +206,23 @@ class KGManager():
                 return statement, None, cache
             
         # hacky way to remove duplicate tails, e.g. p585 16 p585 16
-        if len(labels) > 4 and labels[-1] == labels[-3] and labels[-2] == labels[-4]:
-            labels.pop(-1)
-            labels.pop(-1)
-            statement.pop(-1)
-            statement.pop(-1)
+        if len(labels) > 4:
+            l1 = labels[-1] if not labels[-1].endswith(';') else labels[-1].rstrip(';')
+            l2 = labels[-2] if not labels[-2].endswith(';') else labels[-2].rstrip(';')
+            l3 = labels[-3] if not labels[-3].endswith(';') else labels[-3].rstrip(';')
+            l4 = labels[-4] if not labels[-4].endswith(';') else labels[-4].rstrip(';')
+            if l1 == l3 and l2 == l4:
+                labels.pop(-1)
+                labels.pop(-1)
+                statement.pop(-1)
+                statement.pop(-1)
         
         if len(statement) != len(labels):
             logging.error(f"Length of statement: {len(statement)} does not match length of labels: {len(labels)}; statement: {statement}; labels: {labels}")
+            return statement, None, cache
             
         # lastly, add the literal back, we dont want to derive a label from it
+        labels = [i.replace(" ", "_") for i in labels]
         return statement, labels, cache
             
     
@@ -213,6 +253,30 @@ class KGManager():
         # Check if any text in the flattened list exists in the flattened tuple
         return any(text in flat_tup for text in flat_lst)
 
+    def try_get_label_cache(self):
+        # load it from cache directory
+        path = "cache/label_cache.pkl"
+        if not os.path.exists(path):
+            return {}
+        
+        with open(path, 'rb') as f:
+            cache = pickle.load(f)
+            return cache
+    
+    def save_label_cache(self, cache):
+        path = "cache/label_cache.pkl"
+        if not os.path.exists(path):
+            with open(path, 'wb') as f:
+                pickle.dump(cache, f)
+        else:
+            # update preexisting cache
+            with open(path, 'rb') as f:
+                old_cache = pickle.load(f)
+                old_cache.update(cache)
+            with open(path, 'wb') as f:
+                pickle.dump(old_cache, f)
+        
+
     def add_labels(self, data: pl.DataFrame):
         _data = data.filter(~data['responses'].is_in(['N/A', "", "<NO_PATHS_FOUND>"]))
         # add "trip_labels" column
@@ -224,10 +288,12 @@ class KGManager():
         # # control type of answers
         # _data = _data.filter(pl.col('answer_type') == const.ANS_TYPE_NUMBER)
         
-        cache = {}
+        cache = self.try_get_label_cache()
         logging.info("Adding labels to triples")
+        skipped_paths = 0
+        total_paths = 0
         
-        for datapoint in tqdm(_data.iter_rows(named=True), total=_data.shape[0]):
+        for step, datapoint in enumerate(tqdm(_data.iter_rows(named=True), total=_data.shape[0])):
             trips = datapoint.get('responses').split(config.LIST_SEP)
             logging.info(f"Processing row {datapoint['id']} with triples (n={len(trips)})")
             
@@ -235,31 +301,39 @@ class KGManager():
             trips_formatted = []
             for trip in trips.copy(): # operate on a copy so we can remove invalid ones
                 if len(trip) == 0: continue
+                total_paths += 1
                 trip = trip.strip()
                 # for each triple, decode the identifiers to labels    
                 _trips_formatted, _labels, cache = self.decode_statement_labels(trip.split(), cache, datapoint)
                 if _labels is None:
                     trips.remove(trip)
+                    skipped_paths += 1
                     continue
-                _labels = "; ".join(_labels)
+                _labels = " ".join(_labels)
                 _trips_formatted = " ".join(_trips_formatted)
                 labels.append(_labels)
                 trips_formatted.append(_trips_formatted)
             
-            if len(labels) != len(trips):
+            if len(labels) != len(trips) != len(trips_formatted):
                 logging.error(f"Length of labels: {len(labels)} does not match length of trips: {len(trips)}; \nlabels: {labels}; \ntrips: {trips}")
             
             labels = f"{config.LIST_SEP}".join(labels)
             trips_formatted = f"{config.LIST_SEP}".join(trips_formatted)
+            datapoint['responses'] = trips
             datapoint['responses_formatted'] = trips_formatted
             datapoint['trip_labels'] = labels
             _datapoint = pl.from_dict(datapoint, strict=False)
             _data = _data.update(_datapoint, on="id")
             
-            # save
-            save_path = f"{self.args.data_dir}/data_with_wd_labels.json"
-            _data.write_json(save_path)
-            
+            # save every 100th step
+            if step % 100 == 0:    
+                self.save_label_cache(cache)
+                save_path = f"{self.args.data_dir}/data_with_wd_labels.json"
+                _data.write_json(save_path)
+        
+        logging.info(f"Skipped: {skipped_paths}/{total_paths} paths")
+        save_path = f"{self.args.data_dir}/data_with_wd_labels_final.json"
+        _data.write_json(save_path)    
         logging.info(f"Trip labels saved to: {save_path}")    
         return _data
     

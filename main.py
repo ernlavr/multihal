@@ -280,7 +280,7 @@ def main() -> None:
     logging.info(f"Dataset length: {dataset.shape[0]}")
     
     # DEBUG: get only datapoints with answer_type == "date"
-    # dataset = dataset.filter(pl.col("answer_type").is_in([const.ANS_TYPE_DATE, const.ANS_TYPE_NUMBER]))
+    dataset = dataset.filter(pl.col("answer_type").is_in([const.ANS_TYPE_DATE, const.ANS_TYPE_NUMBER, const.ANS_TYPE_RANK]))
     
     if args.continue_from_previous_state:
         previous_state_continuations(dataset, args)
