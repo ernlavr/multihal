@@ -169,7 +169,6 @@ class KGManager():
                     tmp.pop(idx - 1)
                     tmp.pop(idx - 1) # the list gets re-arranged and all elements shift to left..    
                     tmp[idx] = tmp[idx]
-                logging.info(f"Converting statement: {statement} -> {tmp};")
                 return self.decode_statement_labels(tmp, cache, datapoint)
             
             elif helpers.is_entity_hash(entity):
@@ -291,11 +290,17 @@ class KGManager():
         cache = self.try_get_label_cache()
         logging.info("Adding labels to triples")
         skipped_paths = 0
+        empty_responses = 0
         total_paths = 0
+        new_paths = 0
         
         for step, datapoint in enumerate(tqdm(_data.iter_rows(named=True), total=_data.shape[0])):
             trips = datapoint.get('responses').split(config.LIST_SEP)
             logging.info(f"Processing row {datapoint['id']} with triples (n={len(trips)})")
+            
+            if len(trips) == 0:
+                empty_responses
+                continue
             
             labels = []
             trips_formatted = []
@@ -317,12 +322,18 @@ class KGManager():
             if len(labels) != len(trips) != len(trips_formatted):
                 logging.error(f"Length of labels: {len(labels)} does not match length of trips: {len(trips)}; \nlabels: {labels}; \ntrips: {trips}")
             
+            trips_formatted, labels = helpers.remove_dupes_from_synced_lists(trips_formatted, labels)
+            new_paths += len(trips_formatted)
+            
             labels = f"{config.LIST_SEP}".join(labels)
             trips_formatted = f"{config.LIST_SEP}".join(trips_formatted)
+            trips = f"{config.LIST_SEP}".join(trips)
             datapoint['responses'] = trips
             datapoint['responses_formatted'] = trips_formatted
             datapoint['trip_labels'] = labels
             _datapoint = pl.from_dict(datapoint, strict=False)
+            if len(trips) == 0 and labels == '' and trips_formatted == '':
+                continue
             _data = _data.update(_datapoint, on="id")
             
             # save every 100th step
@@ -332,6 +343,7 @@ class KGManager():
                 _data.write_json(save_path)
         
         logging.info(f"Skipped: {skipped_paths}/{total_paths} paths")
+        logging.info(f"Number of paths in output: {new_paths}")
         save_path = f"{self.args.data_dir}/data_with_wd_labels_final.json"
         _data.write_json(save_path)    
         logging.info(f"Trip labels saved to: {save_path}")    

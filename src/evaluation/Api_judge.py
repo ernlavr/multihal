@@ -64,11 +64,9 @@ class API_Judge(jbc.JudgeBaseClass):
         q = row['input']
         a = row['output']
 
-        
-            
         output = []
         for shuffle_idx in range(num_shuffles + 1):
-            trips = row.get('responses').split(config.LIST_SEP)
+            trips = row.get('responses_formatted').split(config.LIST_SEP)
             trip_labels = row.get('trip_labels').split(config.LIST_SEP)
             mapping = {k:v for k, v in zip(trip_labels, trips)}
             
@@ -123,7 +121,7 @@ class API_Judge(jbc.JudgeBaseClass):
             
             output.append({
                 "trip_labels": selected_trips,
-                "responses": selected_trip_labels,
+                "responses_formatted": selected_trip_labels,
             })
         
         return output
@@ -138,7 +136,7 @@ class API_Judge(jbc.JudgeBaseClass):
         
         for row in tqdm(tmp.iter_rows(named=True), total=len(tmp)):
             top_trips = 10
-            if len(row['responses'].split(config.LIST_SEP)) <= top_trips:
+            if len(row['responses_formatted'].split(config.LIST_SEP)) <= top_trips:
                 continue
             
             best_trips = self._get_best_trips(row, num_shuffles=1)
@@ -150,14 +148,14 @@ class API_Judge(jbc.JudgeBaseClass):
             trip_labels = []
             for i in intersection:
                 idx = best_trips[0]['trip_labels'].index(i)
-                trips.append(best_trips[0]['responses'][idx])
+                trips.append(best_trips[0]['responses_formatted'][idx])
                 trip_labels.append(best_trips[0]['trip_labels'][idx])
                 
             
             trip_labels = f"{config.LIST_SEP}".join(trip_labels)
             trips = f"{config.LIST_SEP}".join(trips)
             
-            row['responses'] = trips
+            row['responses_formatted'] = trips
             row['trip_labels'] = trip_labels
             
             updated_datapoint = pl.from_dict(row, strict=False)

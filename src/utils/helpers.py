@@ -144,6 +144,19 @@ def fill_all_properties(path):
         data = {item['id']: item for item in data}
         return data
 
+def remove_dupes_from_synced_lists(a, b):
+    # Deduplicate while keeping `a` and `b` in sync
+    assert len(a) == len(b), "Lists must be of the same length"
+    seen = set()
+    a_clean = []
+    b_clean = []
+
+    for x, y in zip(a, b):
+        if x not in seen:
+            a_clean.append(x)
+            b_clean.append(y)
+            seen.add(x)
+    return a_clean, b_clean
     
 def flatten_if_2d(lst):
     return list(chain.from_iterable(lst)) if any(isinstance(i, list) for i in lst) else lst
