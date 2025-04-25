@@ -49,6 +49,9 @@ class API_Judge(jbc.JudgeBaseClass):
     
     def parse_api_results(self, results):
         paths = []
+        if results is None:
+            return paths
+        
         for i in results['choices']:
             content = i['message']['content']
             for j in content.split("\n"):
@@ -86,7 +89,7 @@ class API_Judge(jbc.JudgeBaseClass):
                 results = self.parse_api_results(results)
                 
                 # if we fail to get some results
-                if len(results) == 0:
+                if results is None or len(results) == 0:
                     attempts += 1
                     temperature -= 0.05
                     continue
@@ -110,6 +113,7 @@ class API_Judge(jbc.JudgeBaseClass):
                 if len(trip_labels) > top_trips:
                     sampled = random.sample(trip_labels, top_trips)
                     matched, hallucinated = self.match_labels_to_trip_ids(sampled, mapping)
+                    logging.info(f"{row['id']}: Randomly sampled {top_trips} trip labels from {len(trip_labels)} remaining")
                 else:
                     matched, hallucinated = self.match_labels_to_trip_ids(trip_labels, mapping)
                 evaluated_triples += matched
@@ -170,15 +174,14 @@ class API_Judge(jbc.JudgeBaseClass):
     def evaluate_triple_relevance(self, data: pl.DataFrame):
         # filter out rows which have no triples
         logging.info("Running choose best trips")
-        tmp = data.clone()
-        output = pl.DataFrame(schema=tmp.schema)
+        output = data.clone()
         output = output.with_columns([
-            pl.lit("").alias("judged_by"),
+            pl.lit("<NOT_JUDGED>").alias("judged_by"),
             pl.lit(None, dtype=pl.Int32).alias("judged_score")
         ])
         save_path = f"{self.args.data_dir}/llm_judge_trip_rate_{self.model_name.replace('/', '-')}.json"
         
-        for row in tqdm(tmp.iter_rows(named=True), total=len(tmp)):
+        for row in tqdm(output.iter_rows(named=True), total=len(output)):
             # for each row, get the possible tripples
             q = row['input']
             a = row['output']
@@ -203,6 +206,9 @@ class API_Judge(jbc.JudgeBaseClass):
                 prompt = self.get_prompt_triple_relevance(q, a, label)
                 temp = self.args.llm_temp
                 request_response = llmApi.post_api_request(self.model_name, prompt, temp, max_tokens=256)
+                if request_response is None:
+                    logging.error(f"{row['id']}: API request returned None")
+                    continue
                 
                 score = -1
                 for i in request_response['choices']:

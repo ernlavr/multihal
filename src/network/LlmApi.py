@@ -30,9 +30,8 @@ def post_api_request(model_name, prompt, temp, max_tokens=2048, attempts=3) -> d
         output = response.json()
     else:
         logging.error(f"API request failed with status code {response.status_code}")
-        return post_api_request(prompt, temp, max_tokens, attempts-1) if attempts > 0 else None
+        return None
     if 'error' in output:   # daily API call limits will return status code 200 but with an error messagea
         logging.error(f"API request failed with error: {output['error']}")
-        time.sleep(30)
-        return post_api_request(prompt, temp, max_tokens, attempts-1) if attempts > 0 else None
+        return None
     return output

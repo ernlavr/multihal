@@ -60,12 +60,12 @@ Give me your output in YAML format with a given score in Likert scale from 1 to 
 5 - Excellent. Directly addresses the question.
 
 The path can have multiple hops where the entities are connected predicates seperating them.
-Entities and predicates are seperated by commas and the path is contained within parenthesis.
+Entities and predicates are seperated by whitespace. Entities contain underscore to represent seperation within the entity.
 
 Here is an expected format of the input:
 Question: What is the capital of France?
 Answer: Paris
-Path: (France, capital, Paris)
+Path: Napoleon residence Paris capital_of France
 
 Your output needs to be only the score, no explanation or justification is needed. Example:
 Score: 5"""},
@@ -79,17 +79,17 @@ Score: 5"""},
         messages = [
             {"role": "system", "content": f"""From the given Wikidata Knowledge Graph paths, you need to select the Top {num_triples} most relevant paths that are informative and relevant with respect to answering the given question.
 The paths can have multiple hops where the entities alternate with predicates seperating them.
-Each path is seperated by pipe symbol (|) and the entities and predicates are seperated by semicolon.
+Each path is seperated by pipe symbol (|) and the entities and predicates are seperated by whitespace. Entities contain underscore to represent seperation within the entity.
 
 The number of paths can vary but here is an example of the input:
 Question: What is the capital of France?
 Answer: Paris
-Paths: France; capital; Paris | Microsoft; founder; Bill Gates | Napoleon; residence; Paris; capital of; France
+Paths: France capital Paris | Microsoft founder Bill_Gates | Napoleon residence Paris capital_of France
 
 Here is an expected format of the output:
 ```yml
-Path: France; capital; Paris
-Path: Napoleon; residence; Paris; capital of; France
+Path: France capital Paris
+Path: Napoleon residence Paris capital_of France
 ```"""
             },
             {"role": "user", "content": f"Question: {question}; \nAnswer: {answer}; \Paths: {triples}"},
