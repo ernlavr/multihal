@@ -1,0 +1,81 @@
+import polars as pl
+import transformers
+import torch
+import datasets
+
+class Translator():
+    def __init__(self, model_name, args):
+        self.args = args
+        self.pipeline = self.load_model_and_tokenizer(model_name)
+        
+    def load_model_and_tokenizer(self, model_name):
+        # Load the model and tokenizer
+        # self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        # self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name)
+        tokenizer = transformers.AutoTokenizer.from_pretrained(model_name)
+        model = transformers.AutoModelForSeq2SeqLM.from_pretrained(model_name)
+        device = 0 if torch.cuda.is_available() else -1
+        
+        return transformers.pipeline(
+            'translation',
+            model=model,
+            tokenizer=tokenizer,
+            src_lang='eng_Latn',
+            tgt_lang=self.args.tgt_lang,
+            device=0,
+            max_length=2048
+        )
+    
+    def _translate(self, text: str) -> str:
+        return text
+    
+    def translate_batch(self, batch, translation_pipeline, cols):
+        
+        for col in cols:            
+            # get IDs of context which is non-null
+            data = batch[col]
+            non_null_data_id = [i for i, x in enumerate(data) if x is not None]
+            
+            # select IDs of context which are non-null
+            non_null_data_text = [data[i] for i in non_null_data_id]
+            data_transl = translation_pipeline(non_null_data_text)
+            data_transl_loc = {k:v['translation_text'] for k, v in zip(non_null_data_id, data_transl)}
+            
+            translations = [data[i] if i not in data_transl_loc else data_transl_loc[i] for i in range(len(data))]
+            batch[col] = translations
+            
+        return batch
+        
+
+    
+    def translate_df(self, df: pl.DataFrame, cols: list) -> pl.DataFrame:
+        
+        # prepare dataframe for inference
+        dataset = datasets.Dataset.from_dict(df.to_dict(as_series=False))
+        
+        # iterate over the data points
+
+            # iterate over the columns
+            
+                # translate
+                
+            # save
+            
+        # return
+        
+        translated_dataset = dataset.map(lambda x: self.translate_batch(x, self.pipeline, cols), batched=True, batch_size=8)
+        
+        
+        for col in cols.columns:
+            
+            for col in cols:
+                # check if the column exists in the dataframe
+                if col not in df.columns:
+                    raise ValueError(f"Column {col} does not exist in the dataframe")
+                
+                # translate the column
+                df = df.with_columns([
+                    pl.col(col).apply(lambda x: self.translate(x)).alias(col)
+                ])
+        
+        return df

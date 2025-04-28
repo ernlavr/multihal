@@ -28,6 +28,7 @@ import src.analysis.sentence_embedder as se
 import src.kgs.kg_manager as kgm
 import src.network.udp_manager as br
 import src.evaluation.LLMJudge as llmJudge
+import src.translation.translator as tl
 
 import src.evaluation.Api_judge as apiJudge
 import src.evaluation.KnowledgeInjection as ki
@@ -241,6 +242,26 @@ def evaluate_triples(dataset: Any, args: Any) -> None:
     # relevance_values, relevance_counts = np.unique(relevances, return_counts=True)
     # fig.plot_pie({"Relevance count": (relevance_values, relevance_counts)},
     #              "LLM as judge relevance counts;")
+    
+def translate(dataset: Any, dataset_pp, args: Any) -> None:
+    """
+    Translate the dataset using a specified LLM model.
+
+    Parameters:
+        dataset (Any): The dataset to translate.
+        args (Any): Configuration object containing translation parameters.
+    """
+    translator = tl.Translator(args.llm_translation_model, args)
+    # Translate the dataset
+    df = translator.translate_df(dataset, cols=['input', 'output', 'context'])
+    df_pp = translator.translate_df(dataset_pp, cols=['input'])
+    
+    # Save the translated dataset to a JSON file
+    df.write_json(f"{args.data_dir}/translated_dataset.json")
+    df_pp.write_json(f"{args.data_dir}/translated_dataset_pp.json")
+    
+    logging.info("Finished translating dataset")
+    return dataset
 
 def previous_state_continuations(dataset: pl.DataFrame, args) -> pl.DataFrame:
     # Load the dataset to continue from
@@ -332,6 +353,10 @@ def main() -> None:
     
     if args.generate_paraphrasings:
         _, dataset_pp = pp.Paraphraser(args).generate_paraphrasings(dataset, data_manager.get_df_pp())
+        
+    if args.translate:
+        translate(dataset, dataset_pp, args)
+        
     
     if args.test_knowledge_injection:
         ki_eval = ki.KnowledgeInjectionEval(args)

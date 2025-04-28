@@ -170,6 +170,10 @@ class GlobalConfig(metaclass=singl.Singleton):
             clustering_algo=None,           # string, either 'kmeans' or 'dbscan'
             run_clustering=False,
             
+            # translation
+            llm_translation_model=None,
+            tgt_lang=None,
+            
 
             # Model
             sentence_embedder="sentence-transformers/sentence-t5-base", # HuggingFace or local path
