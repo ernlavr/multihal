@@ -175,10 +175,15 @@ class API_Judge(jbc.JudgeBaseClass):
         # filter out rows which have no triples
         logging.info("Running choose best trips")
         output = data.clone()
-        output = output.with_columns([
-            pl.lit("<NOT_JUDGED>").alias("judged_by"),
-            pl.lit(None, dtype=pl.Int32).alias("judged_score")
-        ])
+        if 'judged_by' not in output.columns and 'judged_score' not in output.columns:
+            output = output.with_columns([
+                pl.lit("<NOT_JUDGED>").alias("judged_by"),
+                pl.lit(None, dtype=pl.Int32).alias("judged_score")
+            ])
+            
+        # Get unprocessed datapoints
+        output = output.filter(pl.col('judged_by') ==  "<NOT_JUDGED>")
+        
         save_path = f"{self.args.data_dir}/llm_judge_trip_rate_{self.model_name.replace('/', '-')}.json"
         
         for row in tqdm(output.iter_rows(named=True), total=len(output)):
@@ -192,6 +197,9 @@ class API_Judge(jbc.JudgeBaseClass):
             # trips = row.get('responses').split(config.LIST_SEP)
             trip_labels = row.get('trip_labels').split(config.LIST_SEP)
             trip_codes = row.get('responses_formatted').split(config.LIST_SEP)
+            
+            if trip_labels == 'N/A':
+                continue
             
             trips = zip(trip_labels, trip_codes)
             logging.info(f"Processing row {row['id']} with triples (n={len(trip_codes)})")
