@@ -10,14 +10,15 @@ class EmbeddingModelWrapper():
 
     def __init__(self, model_path=None, bs=8):
         if model_path is None: model_path = self.DEFAULT_MODEL
-        self.model, self.tokenizer = self.load_model(model_path)
         self.bs = bs
         self.cos = nn.CosineSimilarity(dim=1, eps=1e-6)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model, self.tokenizer = self.load_model(model_path)
 
     def load_model(self, model_path):
         model = AutoModel.from_pretrained(
             model_path,
-        ).cuda()
+        ).to(self.device)
         model.eval()
         tokenizer = AutoTokenizer.from_pretrained(
              model_path,
@@ -30,7 +31,7 @@ class EmbeddingModelWrapper():
         return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
     def get_embeddings(self, sentences):
-        embeddings=torch.tensor([],device="cuda")
+        embeddings=torch.tensor([], device=self.device)
         
         if self.bs is None:
             batches=[sentences]
@@ -38,7 +39,7 @@ class EmbeddingModelWrapper():
             batches = [sentences[i:i + self.bs] for i in range(0, len(sentences), self.bs)]  
             
         for sentences in batches:
-            encoded_input = self.tokenizer(sentences, padding=True, truncation=True, return_tensors='pt').to("cuda")
+            encoded_input = self.tokenizer(sentences, padding=True, truncation=True, return_tensors='pt').to(self.device)
             with torch.no_grad():
                 model_output = self.model(**encoded_input)        
             batch_embeddings=self.emb_mean_pooling(model_output, encoded_input['attention_mask'])

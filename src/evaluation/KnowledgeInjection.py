@@ -5,12 +5,13 @@ import src.utils.prompts as prompts
 import numpy as np
 import logging
 from tqdm import tqdm
+from src.evaluation.semscore.semscore import EmbeddingModelWrapper
 
 class KnowledgeInjectionEval():
     def __init__(self, args):
         self.args = args
         self.model_name = args.model_name
-        self.bert_score = evaluate.load("bertscore")
+        self.semantic_similarity = EmbeddingModelWrapper(model_path="sentence-transformers/roberta-base-nli-mean-tokens", bs=None)
     
     def _get_task_prompt(self, task):
         if task == 'grag':
@@ -19,6 +20,11 @@ class KnowledgeInjectionEval():
             return prompts.get_RAG_prompt
         elif task == 'qa':
             return prompts.get_standard_QA_prompt
+        
+    def get_score(self, ground_truth, prediction):
+        gt_emb = self.semantic_similarity.get_embeddings(ground_truth)
+        pred_emb = self.semantic_similarity.get_embeddings(prediction)
+        return self.semantic_similarity.get_similarities(gt_emb, pred_emb)
     
     def _get_eval_dataset(self, data):
         """ Currently the score dataset and full dataset is seperate. We're missing context
@@ -46,14 +52,17 @@ class KnowledgeInjectionEval():
     
     def run_eval(self, data: pl.DataFrame, task="grag"):
         # fetch the data, extend it with another row for model prediction and score
-        data = self._get_eval_dataset(data)
-        data = data.with_columns(
-            model_response=pl.Series(["N/A" for _ in range(len(data))]),
-            responding_model=pl.Series([self.model_name for _ in range(len(data))]),
-            score=pl.Series([np.inf for _ in range(len(data))])
-        )
-        prompt_func = self._get_task_prompt(task)
         
+        if 'model_response' not in data.columns:
+            data = data.with_columns(
+                model_response=pl.Series(["N/A" for _ in range(len(data))]),
+                responding_model=pl.Series([self.model_name for _ in range(len(data))]),
+                sem_score=pl.Series([np.inf for _ in range(len(data))])
+            )
+        else:
+            data = data.filter(pl.col("model_response") != 'N/A')
+        
+        prompt_func = self._get_task_prompt(task)
         output = pl.DataFrame(schema=data.schema)
         
         if task == 'rag':
@@ -73,6 +82,9 @@ class KnowledgeInjectionEval():
                 context = row['context']
             if task == 'grag':
                 context = row['trip_labels']
+            if task != 'qa' and (context is None or context == 'N/A'):
+                continue
+            
             prompt = prompt_func(context, question)
             
             api_response = llmApi.post_api_request(self.model_name, prompt, 0.5, max_tokens=1024)
@@ -85,7 +97,7 @@ class KnowledgeInjectionEval():
                             
             model_response = api_response['choices'][0]['message']['content']
             row['model_response'] = model_response
-            
+            row['sem_score'] = self.get_score(answer, model_response)
             # add row to output
             output = self._merge_and_save_results(row, output, task)
         return data
