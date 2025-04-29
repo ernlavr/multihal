@@ -63,6 +63,34 @@ class API_Judge(jbc.JudgeBaseClass):
                     paths.append(j)
         return paths
     
+    def get_random_trip_labels(self, row: dict, intersecting_trips, total_samples):
+        trip_labels: list = row.get('trip_labels').split(config.LIST_SEP)
+        trip_labels = [i.replace("_", " ") for i in trip_labels]
+        trip_codes = row.get('responses_formatted').split(config.LIST_SEP)
+        mapping = {k:v for k, v in zip(trip_labels, trip_codes)}
+        
+        for it in intersecting_trips:
+            trip_labels.remove(it)
+            
+        num_samples = total_samples - len(intersecting_trips)
+        if num_samples <= 0:
+            return intersecting_trips, []
+        
+        # randomly sample from the remaining trip_labels
+        sampled = []
+        if len(trip_labels) > num_samples:
+            sampled = random.sample(trip_labels, num_samples)
+        else:
+            sampled = trip_labels
+            
+        trip_codes = [mapping[i] for i in sampled]
+
+        return sampled, trip_codes
+            
+            
+            
+        
+    
     def _get_best_trips(self, row, top_trips=10, num_shuffles=1):
         q = row['input']
         a = row['output']
@@ -71,6 +99,10 @@ class API_Judge(jbc.JudgeBaseClass):
         for shuffle_idx in range(num_shuffles + 1):
             trips = row.get('responses_formatted').split(config.LIST_SEP)
             trip_labels = row.get('trip_labels').split(config.LIST_SEP)
+            # replace "_" with " "
+            trip_labels = [i.replace("_", " ") for i in trip_labels]
+            
+            
             mapping = {k:v for k, v in zip(trip_labels, trips)}
             
             assert len(trips) == len(trip_labels), f"Trip labels and trip codes do not match: {len(trips)} != {len(trip_labels)}"
@@ -98,6 +130,7 @@ class API_Judge(jbc.JudgeBaseClass):
                 matched, hallucinated = self.match_labels_to_trip_ids(results, mapping)
                 if len(hallucinated) > 0:
                     logging.info(f"{row['id']}: Hallucinated labels when doing Top-{top_trips} trip extraction: hallc={len(hallucinated)}/{top_trips}; total={len(trip_labels)}")
+                    logging.info("\n".join(hallucinated))
                 
                 # remove matched out of trip_labels
                 trip_labels = [i for i in trip_labels if i not in matched]
@@ -120,12 +153,12 @@ class API_Judge(jbc.JudgeBaseClass):
             
             
             pairs, _ = self.match_labels_to_trip_ids(evaluated_triples, mapping)
-            selected_trips = list(pairs.keys())
-            selected_trip_labels = list(pairs.values())
+            selected_trip_labels = list(pairs.keys())
+            selected_trip_codes = list(pairs.values())
             
             output.append({
-                "trip_labels": selected_trips,
-                "responses_formatted": selected_trip_labels,
+                "trip_labels": selected_trip_labels,
+                "responses_formatted": selected_trip_codes,
             })
         
         return output
@@ -135,21 +168,33 @@ class API_Judge(jbc.JudgeBaseClass):
         tmp = data.clone()
         intersecting_dp_count = []
         save_path = f"{self.args.data_dir}/llm_judge_trip_sel_{self.model_name.replace('/', '-')}.json"
-        # get processable datapoints
-        tmp = tmp.filter()
+        random_fills = 0
+        total_paths = 0
+        
+        # filter for more than 10 <SEP>
+        tmp = tmp.filter(pl.col('responses_formatted').str.count_matches(config.LIST_SEP) > 10)
         
         for row in tqdm(tmp.iter_rows(named=True), total=len(tmp)):
             top_trips = 10
-            if len(row['responses_formatted'].split(config.LIST_SEP)) <= top_trips:
+            path_counts = len(row['responses_formatted'].split(config.LIST_SEP))
+            
+            if path_counts <= top_trips:
+                total_paths += path_counts
                 continue
+            total_paths += top_trips
             
             best_trips = self._get_best_trips(row, num_shuffles=1)
             intersection = set(best_trips[0]['trip_labels']).intersection(set(best_trips[1]['trip_labels']))
             intersecting_dp_count.append(len(intersection))
             
-            # get corresponding trips that match the intersection
+            # if we dont have enough in our intersection, fill the gap randomly
             trips = []
             trip_labels = []
+            
+            if len(intersection) < top_trips:
+                random_fills += top_trips - len(intersection)
+                trip_labels, trips = self.get_random_trip_labels(row, intersection, top_trips)    
+            
             for i in intersection:
                 idx = best_trips[0]['trip_labels'].index(i)
                 trips.append(best_trips[0]['responses_formatted'][idx])
@@ -167,6 +212,7 @@ class API_Judge(jbc.JudgeBaseClass):
             data.write_json(save_path.replace(".json", "_step.json"))
         
         data.write_json(save_path)
+        logging.info(f"Total paths: {total_paths}; Randomly filled: {random_fills}")
         logging.info(f"Intersecting datapoints (dp={len(intersecting_dp_count)} / {len(tmp)}): mean={np.mean(intersecting_dp_count)}; std={np.std(intersecting_dp_count)}")
         logging.info(f"Saved to {save_path}")
         return data
@@ -198,7 +244,7 @@ class API_Judge(jbc.JudgeBaseClass):
             trip_labels = row.get('trip_labels').split(config.LIST_SEP)
             trip_codes = row.get('responses_formatted').split(config.LIST_SEP)
             
-            if trip_labels == 'N/A':
+            if trip_labels == 'N/A' or trip_labels == '':
                 continue
             
             trips = zip(trip_labels, trip_codes)

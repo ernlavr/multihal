@@ -171,6 +171,7 @@ class GlobalConfig(metaclass=singl.Singleton):
             run_clustering=False,
             
             # translation
+            translate=False,
             llm_translation_model=None,
             tgt_lang=None,
             

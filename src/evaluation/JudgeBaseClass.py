@@ -51,48 +51,47 @@ class JudgeBaseClass(ABC):
         """ Returns the prompt for the LLM to evaluate the relevance of the triple to the question and answer """
         # weird indenting is for formatting
         messages = [
-            {"role": "system", "content": f"""Score the given Wikidata Knowledge Graph path on how informative and relevant it is with respect to the given answer and question.
+            {"role": "system", "content": f"""Score the given Wikidata Knowledge Graph path on how informative and relevant it is with respect to the given answer and question. The path can have multiple hops where the entities are connected predicates seperating them. 
+
 Give me your output in YAML format with a given score in Likert scale from 1 to 5.
 1 - Very poor. Completley unrelated path.
 2 - Poor. Syntactic overlap may exist between the path and question/answer but semantics are different.
 3 - Normal. Syntactic overlap exists touching upon some semantics. Could be usable as a starting point for information support, but not directly related to the question without knowing the answer.
-4 - Good. Question can be implicitly answered with the path.
+4 - Good. Good semantic overlap which allows the question to be implicitly answered with the path.
 5 - Excellent. Directly addresses the question.
-
-The path can have multiple hops where the entities are connected predicates seperating them.
-Entities and predicates are seperated by whitespace. Entities contain underscore to represent seperation within the entity.
 
 Here is an expected format of the input:
 Question: What is the capital of France?
 Answer: Paris
-Path: Napoleon residence Paris capital_of France
+Path: Napoleon residence Paris capital of France
 
 Your output needs to be only the score, no explanation or justification is needed. Example:
 Score: 5"""},
-            {"role": "user", "content": f"Question: {question}; \nAnswer: {answer}; \Path: ({triple})"},
+            {"role": "user", "content": f"Question: {question}; \nAnswer: {answer}; \nPath: {triple}"},
         ]
         return messages
     
     def get_prompt_top_triples(self, question, answer, triples, num_triples=10):
         """ Returns the prompt for the LLM to evaluate the relevance of the triple to the question and answer """
-        triples = " | ".join(triples)
+        triples = "\n".join(triples)
         messages = [
             {"role": "system", "content": f"""From the given Wikidata Knowledge Graph paths, you need to select the Top {num_triples} most relevant paths that are informative and relevant with respect to answering the given question.
-The paths can have multiple hops where the entities alternate with predicates seperating them.
-Each path is seperated by pipe symbol (|) and the entities and predicates are seperated by whitespace. Entities contain underscore to represent seperation within the entity.
+The paths can have multiple hops where the entities and predicates alternate. Each path is seperated by a new line and the within the path the entities and predicates are seperated by whitespace. Your output needs to be exact matches to the paths given in the input.
 
 The number of paths can vary but here is an example of the input:
 Question: What is the capital of France?
 Answer: Paris
-Paths: France capital Paris | Microsoft founder Bill_Gates | Napoleon residence Paris capital_of France
+Paths: France capital Paris
+Microsoft founder Bill Gates
+Napoleon residence Paris capital of France
 
 Here is an expected format of the output:
 ```yml
 Path: France capital Paris
-Path: Napoleon residence Paris capital_of France
+Path: Napoleon residence Paris capital of France
 ```"""
             },
-            {"role": "user", "content": f"Question: {question}; \nAnswer: {answer}; \Paths: {triples}"},
+            {"role": "user", "content": f"Question: {question}; \nAnswer: {answer}; \nPaths: {triples}"},
         ]    
         return messages
     
