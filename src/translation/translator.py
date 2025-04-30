@@ -18,7 +18,8 @@ class Translator():
         # self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name)
         tokenizer = transformers.AutoTokenizer.from_pretrained(model_name)
         model = transformers.AutoModelForSeq2SeqLM.from_pretrained(model_name)
-        device = 0 if torch.cuda.is_available() else -1
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.batch_size = 8
         
         return transformers.pipeline(
             'translation',
@@ -26,8 +27,9 @@ class Translator():
             tokenizer=tokenizer,
             src_lang='eng_Latn',
             tgt_lang=self.args.tgt_lang,
-            device=0,
-            max_length=2048
+            device=device,
+            max_length=2048,
+            batch_size=self.batch_size,
         )
         
     def get_non_translatable_mask(self, texts: list[str]) -> bool:
@@ -69,13 +71,13 @@ class Translator():
         
 
     
-    def translate_df(self, df: pl.DataFrame, cols: list) -> pl.DataFrame:
+    def translate_df(self, df: pl.DataFrame, cols: list, save_name="") -> pl.DataFrame:
         # prepare dataframe for inference
         dataset = datasets.Dataset.from_dict(df.to_dict(as_series=False))
-        translated_dataset = dataset.map(lambda x: self.translate_batch(x, self.pipeline, cols), batched=True, batch_size=8)
+        translated_dataset = dataset.map(lambda x: self.translate_batch(x, self.pipeline, cols), batched=True, batch_size=self.batch_size)
         
         # convert back to polars dataframe
         translated = pl.from_dict(translated_dataset.to_dict(), schema=df.schema)
-        save_path = os.path.join(self.args.output_dir, f"multihal_{self.args.tgt_lang}.json")
+        save_path = os.path.join(self.args.data_dir, f"multihal_{save_name}_{self.args.tgt_lang}.json")
         translated.write_json(save_path)
         return translated

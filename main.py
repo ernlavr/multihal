@@ -253,12 +253,16 @@ def translate(dataset: Any, dataset_pp, args: Any) -> None:
     """
     translator = tl.Translator(args.llm_translation_model, args)
     # Translate the dataset
-    df = translator.translate_df(dataset, cols=['input', 'output'])
-    df_pp = translator.translate_df(dataset_pp, cols=['input'])
-    
+    df = translator.translate_df(dataset, cols=['input', 'output'], save_name="df")
     # Save the translated dataset to a JSON file
     df.write_json(f"{args.data_dir}/translated_dataset.json")
-    df_pp.write_json(f"{args.data_dir}/translated_dataset_pp.json")
+    
+    if dataset_pp is not None:
+        df_pp = translator.translate_df(dataset_pp, cols=['input'], save_name="df_pp")
+        df_pp.write_json(f"{args.data_dir}/translated_dataset_pp.json")
+    
+    
+    
     
     logging.info("Finished translating dataset")
     return dataset
@@ -345,9 +349,6 @@ def main() -> None:
         dataset = get_trip_labels(dataset, args)
 
     # Evaluate triples using the LLM judge if enabled
-    if args.select_labels:
-        dataset = evaluate_triples(dataset, args)
-    
     if args.rank_labels:
         dataset = evaluate_triples(dataset, args)
     
@@ -355,7 +356,7 @@ def main() -> None:
         _, dataset_pp = pp.Paraphraser(args).generate_paraphrasings(dataset, data_manager.get_df_pp())
         
     if args.translate:
-        translate(dataset, dataset_pp, args)
+        translate(dataset, None, args)
         
     
     if args.test_knowledge_injection:
