@@ -253,7 +253,7 @@ def translate(dataset: Any, dataset_pp, args: Any) -> None:
     """
     translator = tl.Translator(args.llm_translation_model, args)
     # Translate the dataset
-    df = translator.translate_df(dataset, cols=['input', 'output', 'context'])
+    df = translator.translate_df(dataset, cols=['input', 'output'])
     df_pp = translator.translate_df(dataset_pp, cols=['input'])
     
     # Save the translated dataset to a JSON file

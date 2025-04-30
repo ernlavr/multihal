@@ -2,6 +2,10 @@ import polars as pl
 import transformers
 import torch
 import datasets
+import os
+import src.utils.helpers as hlp
+import string
+
 
 class Translator():
     def __init__(self, model_name, args):
@@ -25,6 +29,17 @@ class Translator():
             device=0,
             max_length=2048
         )
+        
+    def get_non_translatable_mask(self, texts: list[str]) -> bool:
+        mask = []
+        for i in texts:
+            if i.translate(str.maketrans('', '', string.punctuation)).strip().isdigit():
+                mask.append(True)
+            else:
+                mask.append(False)
+                
+        return mask
+        
     
     def _translate(self, text: str) -> str:
         return text
@@ -35,6 +50,8 @@ class Translator():
             # get IDs of context which is non-null
             data = batch[col]
             non_null_data_id = [i for i, x in enumerate(data) if x is not None]
+            mask = self.get_non_translatable_mask(data)
+            replacements = [data[i] if mask[i] else None for i in range(len(data))]
             
             # select IDs of context which are non-null
             non_null_data_text = [data[i] for i in non_null_data_id]
@@ -42,6 +59,10 @@ class Translator():
             data_transl_loc = {k:v['translation_text'] for k, v in zip(non_null_data_id, data_transl)}
             
             translations = [data[i] if i not in data_transl_loc else data_transl_loc[i] for i in range(len(data))]
+            
+            # replace masked values
+            translations = [replacements[idx] if replacements[idx] is not None else i for idx, i in enumerate(translations)]
+            
             batch[col] = translations
             
         return batch
@@ -49,33 +70,12 @@ class Translator():
 
     
     def translate_df(self, df: pl.DataFrame, cols: list) -> pl.DataFrame:
-        
         # prepare dataframe for inference
         dataset = datasets.Dataset.from_dict(df.to_dict(as_series=False))
-        
-        # iterate over the data points
-
-            # iterate over the columns
-            
-                # translate
-                
-            # save
-            
-        # return
-        
         translated_dataset = dataset.map(lambda x: self.translate_batch(x, self.pipeline, cols), batched=True, batch_size=8)
         
-        
-        for col in cols.columns:
-            
-            for col in cols:
-                # check if the column exists in the dataframe
-                if col not in df.columns:
-                    raise ValueError(f"Column {col} does not exist in the dataframe")
-                
-                # translate the column
-                df = df.with_columns([
-                    pl.col(col).apply(lambda x: self.translate(x)).alias(col)
-                ])
-        
-        return df
+        # convert back to polars dataframe
+        translated = pl.from_dict(translated_dataset.to_dict(), schema=df.schema)
+        save_path = os.path.join(self.args.output_dir, f"multihal_{self.args.tgt_lang}.json")
+        translated.write_json(save_path)
+        return translated
