@@ -16,14 +16,18 @@ def post_api_request(model_name, prompt, temp, max_tokens=2048, attempts=3) -> d
             "temperature": temp,
         })
 
-    response = requests.post(
-        url="https://openrouter.ai/api/v1/chat/completions",
-        headers={
-            "Authorization": "Bearer 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",
-            "Content-Type": "application/json",
-        },
-        data=data_json
-    )
+    try:
+        response = requests.post(
+            url="https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": "Bearer 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",
+                "Content-Type": "application/json",
+            },
+            data=data_json
+        )
+    except Exception as e:
+        logging.error(f"API request failed with error: {e}")
+        return None
     
     output = None
     if response.status_code == 200:

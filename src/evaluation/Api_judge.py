@@ -70,7 +70,7 @@ class API_Judge(jbc.JudgeBaseClass):
         mapping = {k:v for k, v in zip(trip_labels, trip_codes)}
         
         for it in intersecting_trips:
-            trip_labels.remove(it)
+            trip_labels = [i for i in trip_labels if i.lower() != it.lower()]
             
         num_samples = total_samples - len(intersecting_trips)
         if num_samples <= 0:
