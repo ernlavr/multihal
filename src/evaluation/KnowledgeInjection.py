@@ -22,9 +22,10 @@ class KnowledgeInjectionEval():
             return prompts.get_standard_QA_prompt
         
     def get_score(self, ground_truth, prediction):
-        gt_emb = self.semantic_similarity.get_embeddings(ground_truth)
-        pred_emb = self.semantic_similarity.get_embeddings(prediction)
-        return self.semantic_similarity.get_similarities(gt_emb, pred_emb)
+        return self.semantic_similarity.get_embeddings_e5(ground_truth, prediction)
+        # gt_emb = self.semantic_similarity.get_embeddings(ground_truth)
+        # pred_emb = self.semantic_similarity.get_embeddings(prediction)
+        # return self.semantic_similarity.get_similarities(gt_emb, pred_emb)
     
     def _get_eval_dataset(self, data):
         """ Currently the score dataset and full dataset is seperate. We're missing context
@@ -52,21 +53,22 @@ class KnowledgeInjectionEval():
     
     def run_eval(self, data: pl.DataFrame, task="grag"):
         # fetch the data, extend it with another row for model prediction and score
-        
+        data = data.filter(pl.col("judged_by") != "<NOT_JUDGED>")
+        unprocessed_dp = None
         if 'model_response' not in data.columns:
-            data = data.with_columns(
+            unprocessed_dp = data.with_columns(
                 model_response=pl.Series(["N/A" for _ in range(len(data))]),
                 responding_model=pl.Series([self.model_name for _ in range(len(data))]),
                 sem_score=pl.Series([np.inf for _ in range(len(data))])
             )
         else:
-            data = data.filter(pl.col("model_response") != 'N/A')
+            unprocessed_dp = data.filter(pl.col("model_response") == 'N/A')
         
         prompt_func = self._get_task_prompt(task)
         output = pl.DataFrame(schema=data.schema)
         
         if task == 'rag':
-            data = data.filter((
+            unprocessed_dp = unprocessed_dp.filter((
                     pl.col("context").is_not_null() &
                     ~pl.col("context").str.contains('https://'),
                     pl.col("context").str.len_chars() > 20,
@@ -74,14 +76,14 @@ class KnowledgeInjectionEval():
             
             
         
-        for idx, row in enumerate(tqdm(data.iter_rows(named=True), total=len(data))):
+        for idx, row in enumerate(tqdm(unprocessed_dp.iter_rows(named=True), total=len(unprocessed_dp))):
             question = row['input']
             context = None
             answer = row['output']
             if task == 'rag':
                 context = row['context']
             if task == 'grag':
-                context = row['trip_labels']
+                context = row['trip_labels'].replace("_", " ")
             if task != 'qa' and (context is None or context == 'N/A'):
                 continue
             
@@ -92,7 +94,7 @@ class KnowledgeInjectionEval():
             if api_response is None:
                 logging.error(f"Failed to get API response for row {row['id']}")
                 row['model_response'] = "<API_ERROR>"
-                row['score'] = np.inf
+                row['sem_score'] = np.inf
                 output = self._merge_and_save_results(row, output, task)
                 continue
                             
@@ -104,4 +106,9 @@ class KnowledgeInjectionEval():
             row['sem_score'] = self.get_score(answer, model_response)
             # add row to output
             output = self._merge_and_save_results(row, output, task)
+            
+            _datapoint = pl.from_dict(row, strict=False)
+            data = data.update(_datapoint, on="id")
+            data.write_json(f"{self.args.data_dir}/llm_eval_{self.model_name.replace('/', '-')}_full_{task}.json")
+            
         return data

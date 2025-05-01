@@ -24,11 +24,11 @@ def get_Graph_prompt(kg_path, question):
     prompt = [
         {
             "role": "system",
-            "content": f"""You need to answer the question given by the user. You can use Path as additional knowledge if needed.
-The Path describes a knowledge graph path taken from Wikidata. The path entities and relations are seperated by white spaces. Entities and relations may contain underscores which act as word seperators. In your answer you do not need to provide any reasoning or explanation, only provide the answer.
+            "content": f"""You need to answer the question given by the user. In your answer you do not need to provide any reasoning or explanation, only provide the answer.
+The Path is an optional text passage that could be useful, so you can use it as additional knowledge if necessary, if it is not helpful, you can ignore it and make your best guess.
 
 Here is example input.
-Path: Albert_Einstein place_of_birth Ulm country Germany
+Path: Albert Einstein place of birth Ulm country Germany
 Question: Where was Albert Einstein born?
 
 Here is example output.

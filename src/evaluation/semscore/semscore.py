@@ -17,7 +17,7 @@ class EmbeddingModelWrapper():
 
     def load_model(self, model_path):
         model = AutoModel.from_pretrained(
-            model_path,
+            model_path, trust_remote_code=True
         ).to(self.device)
         model.eval()
         tokenizer = AutoTokenizer.from_pretrained(
@@ -47,6 +47,39 @@ class EmbeddingModelWrapper():
             embeddings=torch.cat( (embeddings, batch_embeddings), dim=0 )
 
         return embeddings
+    
+    def average_pool(self, last_hidden_states: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+        last_hidden = last_hidden_states.masked_fill(~attention_mask[..., None].bool(), 0.0)
+        return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
+    
+
+    
+    def get_embeddings_jina(self, sentence1, sentence2):
+        sentences = [sentence1, sentence2]
+        
+        encoded_input = self.tokenizer(sentences, padding=True, truncation=True, return_tensors="pt")
+        task = 'text-matching'
+        task_id = self.model._adaptation_map[task]
+        adapter_mask = torch.full((len(sentences),), task_id, dtype=torch.int32)
+        with torch.no_grad():
+            model_output = self.model(**encoded_input, adapter_mask=adapter_mask)
+        
+        embeddings = self.emb_mean_pooling(model_output, encoded_input["attention_mask"])
+        embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+        return embeddings
+    
+    def get_embeddings_e5(self, sentence1, sentence2):
+        # Tokenize the input texts
+        sentences = [f"query: {sentence1}", f"query: {sentence2}"]
+        batch_dict = self.tokenizer(sentences, max_length=512, padding=True, truncation=True, return_tensors='pt')
+
+        outputs = self.model(**batch_dict)
+        embeddings = self.average_pool(outputs.last_hidden_state, batch_dict['attention_mask'])
+
+        # normalize embeddings
+        embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+        scores = (embeddings[:1] @ embeddings[1:].T)
+        return scores.item()
 
     def get_similarities(self, x, y=None):
         if y is None:
