@@ -11,7 +11,7 @@ class KnowledgeInjectionEval():
     def __init__(self, args):
         self.args = args
         self.model_name = args.model_name
-        self.semantic_similarity = EmbeddingModelWrapper(model_path="sentence-transformers/roberta-base-nli-mean-tokens", bs=None)
+        self.semantic_similarity = EmbeddingModelWrapper(model_path="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", bs=None)
     
     def _get_task_prompt(self, task):
         if task == 'grag':
@@ -74,7 +74,7 @@ class KnowledgeInjectionEval():
             
             
         
-        for row in tqdm(data.iter_rows(named=True), total=len(data)):
+        for idx, row in enumerate(tqdm(data.iter_rows(named=True), total=len(data))):
             question = row['input']
             context = None
             answer = row['output']
@@ -86,7 +86,8 @@ class KnowledgeInjectionEval():
                 continue
             
             prompt = prompt_func(context, question)
-            
+            if idx % 100 == 0:
+                logging.info(prompt)
             api_response = llmApi.post_api_request(self.model_name, prompt, 0.5, max_tokens=1024)
             if api_response is None:
                 logging.error(f"Failed to get API response for row {row['id']}")
@@ -96,6 +97,9 @@ class KnowledgeInjectionEval():
                 continue
                             
             model_response = api_response['choices'][0]['message']['content']
+            if model_response.startswith("Answer: "):
+                model_response = model_response[len("Answer: "):]
+                
             row['model_response'] = model_response
             row['sem_score'] = self.get_score(answer, model_response)
             # add row to output
