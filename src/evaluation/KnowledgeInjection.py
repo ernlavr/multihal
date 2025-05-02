@@ -46,6 +46,8 @@ class KnowledgeInjectionEval():
         return score_data
         
     def _merge_and_save_results(self, row, data, task):
+        logging.debug(f"Adding row {row['id']} to output")
+        logging.debug(f"Row: {data.schema}")
         data = pl.concat([data, pl.DataFrame(row, schema=data.schema)])
         data.write_json(f"{self.args.data_dir}/llm_eval_{self.model_name.replace('/', '-')}_{task}.json")
         return data
