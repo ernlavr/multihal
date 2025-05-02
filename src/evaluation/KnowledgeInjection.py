@@ -46,8 +46,6 @@ class KnowledgeInjectionEval():
         return score_data
         
     def _merge_and_save_results(self, row, data, task):
-        logging.debug(f"Adding row {row['id']} to output")
-        logging.debug(f"Row: {data.schema}")
         data = pl.concat([data, pl.DataFrame(row, schema=data.schema)])
         data.write_json(f"{self.args.data_dir}/llm_eval_{self.model_name.replace('/', '-')}_{task}.json")
         return data
@@ -56,6 +54,7 @@ class KnowledgeInjectionEval():
     def run_eval(self, data: pl.DataFrame, task="grag"):
         # fetch the data, extend it with another row for model prediction and score
         data = data.filter(pl.col("judged_by") != "<NOT_JUDGED>")
+        data = data.filter(pl.col("judged_score") >= 4)
         unprocessed_dp = None
         if 'model_response' not in data.columns:
             unprocessed_dp = data.with_columns(
@@ -67,7 +66,7 @@ class KnowledgeInjectionEval():
             unprocessed_dp = data.filter(pl.col("model_response") == 'N/A')
         
         prompt_func = self._get_task_prompt(task)
-        output = pl.DataFrame(schema=data.schema)
+        output = pl.DataFrame(schema=unprocessed_dp.schema)
         
         if task == 'rag':
             unprocessed_dp = unprocessed_dp.filter((
