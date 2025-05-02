@@ -51,6 +51,11 @@ class Translator():
         for col in cols:            
             # get IDs of context which is non-null
             data = batch[col]
+            if col == 'trip_labels':
+                data = [i.replace(" ", "; ") for i in data]
+                data = [i.replace("_", " ") for i in data]
+                
+            
             non_null_data_id = [i for i, x in enumerate(data) if x is not None]
             mask = self.get_non_translatable_mask(data)
             replacements = [data[i] if mask[i] else None for i in range(len(data))]
