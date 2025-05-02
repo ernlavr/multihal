@@ -16,11 +16,12 @@ def post_api_request(model_name, prompt, temp, max_tokens=2048, attempts=3) -> d
             "temperature": temp,
         })
 
+    response = None
     try:
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={
-                "Authorization": "Bearer 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",
+                "Authorization": "Bearer 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",
                 "Content-Type": "application/json",
             },
             data=data_json

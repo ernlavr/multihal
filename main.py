@@ -361,7 +361,8 @@ def main() -> None:
     
     if args.test_knowledge_injection:
         ki_eval = ki.KnowledgeInjectionEval(args)
-        ki_eval.run_eval(dataset, args.knowledge_inj_task)
+        ki_eval.run_eval(dataset, "grag")
+        ki_eval.run_eval(dataset, "qa")
 
 
 if __name__ == '__main__':

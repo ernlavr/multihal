@@ -72,6 +72,8 @@ class EmbeddingModelWrapper():
         # Tokenize the input texts
         sentences = [f"query: {sentence1}", f"query: {sentence2}"]
         batch_dict = self.tokenizer(sentences, max_length=512, padding=True, truncation=True, return_tensors='pt')
+        # put to device
+        batch_dict = {k: v.to(self.device) for k, v in batch_dict.items()}
 
         outputs = self.model(**batch_dict)
         embeddings = self.average_pool(outputs.last_hidden_state, batch_dict['attention_mask'])
@@ -79,7 +81,10 @@ class EmbeddingModelWrapper():
         # normalize embeddings
         embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
         scores = (embeddings[:1] @ embeddings[1:].T)
-        return scores.item()
+        
+        # move to cpu and convert to numpy
+        scores = scores.detach().cpu().numpy().item()
+        return scores
 
     def get_similarities(self, x, y=None):
         if y is None:
