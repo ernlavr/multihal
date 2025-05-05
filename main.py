@@ -34,6 +34,7 @@ import src.evaluation.Api_judge as apiJudge
 import src.evaluation.KnowledgeInjection as ki
 import src.utils.constants as const
 
+from types import SimpleNamespace
 # import src.evaluation.DeepEval as deJudge
 
 
@@ -253,7 +254,8 @@ def translate(dataset: Any, dataset_pp, args: Any) -> None:
     """
     translator = tl.Translator(args.llm_translation_model, args)
     # Translate the dataset
-    df = translator.translate_df(dataset, cols=['input', 'output'], save_name="df")
+    dataset = dataset.filter(pl.col("judged_score") >= 4)
+    df = translator.translate_df(dataset, cols=['trip_labels', 'output'], save_name="df")
     # Save the translated dataset to a JSON file
     df.write_json(f"{args.data_dir}/translated_dataset.json")
     
@@ -296,6 +298,19 @@ def main() -> None:
     config.init_wandb(args)
     wbMang.WandbManager(args)
 
+    # if we're in a sweep
+    wb = wandb.config._users.get("sweep", None)
+    if wb is not None:
+        args = SimpleNamespace(**wandb.config.as_dict())
+        
+    lang_codes = ["fra", "spa", "ita", "por", "deu"]
+    args.tgt_lang = "eng"
+    for code in lang_codes:
+        if code in args.load_premade_dataset:
+            args.tgt_lang = code
+            break
+            
+
     logging.info("Starting data manager")
     data_manager = dm.DataManager(args)
     analyzer = None
@@ -304,8 +319,7 @@ def main() -> None:
     dataset_pp = None
     logging.info(f"Dataset length: {dataset.shape[0]}")
     
-    # DEBUG: get only datapoints with answer_type == "date"
-    # dataset = dataset.filter(pl.col("answer_type").is_in([const.ANS_TYPE_DATE, const.ANS_TYPE_NUMBER, const.ANS_TYPE_RANK]))
+    
     
     if args.continue_from_previous_state:
         previous_state_continuations(dataset, args)
@@ -364,6 +378,20 @@ def main() -> None:
         ki_eval.run_eval(dataset, "grag")
         ki_eval.run_eval(dataset, "qa")
 
+
+# sweep_configuration = {
+#     "method": "random",
+#     "metric": {"goal": "minimize", "name": "score"},
+#     "parameters": {
+#         "x": {"max": 0.1, "min": 0.01},
+#         "y": {"values": [1, 3, 7]},
+#     },
+# }
+
+# # 3: Start the sweep
+# sweep_id = wandb.sweep(sweep=sweep_configuration, project="multihal")
+
+# wandb.agent(sweep_id, function=main, count=10)
 
 if __name__ == '__main__':
     logging.info("Starting main")

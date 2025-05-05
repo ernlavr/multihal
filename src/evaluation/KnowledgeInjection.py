@@ -47,7 +47,7 @@ class KnowledgeInjectionEval():
         
     def _merge_and_save_results(self, row, data, task):
         data = pl.concat([data, pl.DataFrame(row, schema=data.schema)])
-        data.write_json(f"{self.args.data_dir}/llm_eval_{self.model_name.replace('/', '-')}_{task}.json")
+        data.write_json(f"{self.args.data_dir}/llm_eval_{self.model_name.replace('/', '-')}_{self.args.tgt_lang}_{task}.json")
         return data
         
     
@@ -110,6 +110,6 @@ class KnowledgeInjectionEval():
             
             _datapoint = pl.from_dict(row, strict=False)
             data = data.update(_datapoint, on="id")
-            data.write_json(f"{self.args.data_dir}/llm_eval_{self.model_name.replace('/', '-')}_full_{task}.json")
+            data.write_json(f"{self.args.data_dir}/llm_eval_{self.model_name.replace('/', '-')}_full_{self.args.tgt_lang}_{task}.json")
             
         return data
