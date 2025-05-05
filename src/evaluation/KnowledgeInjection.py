@@ -15,11 +15,11 @@ class KnowledgeInjectionEval():
     
     def _get_task_prompt(self, task):
         if task == 'grag':
-            return prompts.get_Graph_prompt
+            return prompts.get_GRAG_prompt(self.args.tgt_lang)
         elif task == 'rag':
             return prompts.get_RAG_prompt
         elif task == 'qa':
-            return prompts.get_standard_QA_prompt
+            return prompts.get_QA_prompt(self.args.tgt_lang)
         
     def get_score(self, ground_truth, prediction):
         return self.semantic_similarity.get_embeddings_e5(ground_truth, prediction)
