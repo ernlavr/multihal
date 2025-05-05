@@ -35,6 +35,8 @@ import src.evaluation.KnowledgeInjection as ki
 import src.utils.constants as const
 
 from types import SimpleNamespace
+import omegaconf
+
 # import src.evaluation.DeepEval as deJudge
 
 
@@ -108,13 +110,13 @@ def subsample_data(data_manager: dm.DataManager, dataset: pl.DataFrame, args: An
     dataset = data_manager.subsample(args.subset_sample_size, dataset)
     # Plot dataset counts by source
     labels, counts = np.unique(dataset['source_dataset'], return_counts=True)
-    fig.plot_pie({"Dataset counts": (labels, counts)}, "Dataset counts", args.fig_dir + "/subsampling")
+    # fig.plot_pie({"Dataset counts": (labels, counts)}, "Dataset counts", args.fig_dir + "/subsampling")
 
-    # For each source dataset, plot domain counts
-    for source_ds, ds_grouped in dataset.group_by('source_dataset'):
-        domain_labels, domain_counts = np.unique(ds_grouped['domain'], return_counts=True)
-        fig.plot_pie({"Domain counts": (domain_labels, domain_counts)},
-                     f"Domain counts for {source_ds}", args.fig_dir + "/subsampling")
+    # # For each source dataset, plot domain counts
+    # for source_ds, ds_grouped in dataset.group_by('source_dataset'):
+    #     domain_labels, domain_counts = np.unique(ds_grouped['domain'], return_counts=True)
+    #     fig.plot_pie({"Domain counts": (domain_labels, domain_counts)},
+    #                  f"Domain counts for {source_ds}", args.fig_dir + "/subsampling")
 
     logging.info(f"Number of datapoints after subsampling: {dataset.shape[0]}")
     return dataset
@@ -255,7 +257,7 @@ def translate(dataset: Any, dataset_pp, args: Any) -> None:
     translator = tl.Translator(args.llm_translation_model, args)
     # Translate the dataset
     dataset = dataset.filter(pl.col("judged_score") >= 4)
-    df = translator.translate_df(dataset, cols=['trip_labels', 'output'], save_name="df")
+    df = translator.translate_df(dataset, cols=['input', 'output', 'trip_labels'], save_name="df")
     # Save the translated dataset to a JSON file
     df.write_json(f"{args.data_dir}/translated_dataset.json")
     
@@ -297,18 +299,21 @@ def main() -> None:
     global_config.set_random_seeds(args.seed)
     config.init_wandb(args)
     wbMang.WandbManager(args)
-
-    # if we're in a sweep
+    
+    # for sweeps
     wb = wandb.config._users.get("sweep", None)
     if wb is not None:
         args = SimpleNamespace(**wandb.config.as_dict())
-        
-    lang_codes = ["fra", "spa", "ita", "por", "deu"]
-    args.tgt_lang = "eng"
-    for code in lang_codes:
-        if code in args.load_premade_dataset:
-            args.tgt_lang = code
-            break
+        omegaconf.OmegaConf.save(config=args.__dict__, f=f"{args.conf_dir}/args_sweep.yaml")
+        logging.info(f"New sweep args: {pprint.pformat(vars(args))}")
+    
+    if args.tgt_lang is None:
+        lang_codes = ["fra", "spa", "ita", "por", "deu"]
+        args.tgt_lang = "eng"
+        for code in lang_codes:
+            if code in args.load_premade_dataset:
+                args.tgt_lang = code
+                break
             
 
     logging.info("Starting data manager")

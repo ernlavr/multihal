@@ -91,7 +91,7 @@ class KnowledgeInjectionEval():
             prompt = prompt_func(context, question)
             if idx % 100 == 0:
                 logging.info(prompt)
-            api_response = llmApi.post_api_request(self.model_name, prompt, 0.5, max_tokens=1024)
+            api_response = llmApi.post_api_request(self.model_name, prompt, temp=1, max_tokens=1024)
             if api_response is None:
                 logging.error(f"Failed to get API response for row {row['id']}")
                 row['model_response'] = "<API_ERROR>"

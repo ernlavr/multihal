@@ -28,8 +28,14 @@ class Translator():
             src_lang='eng_Latn',
             tgt_lang=self.args.tgt_lang,
             device=device,
-            max_length=2048,
+            max_length=1024,
             batch_size=self.batch_size,
+            
+            # beam decoding
+            num_beams=5,
+            length_penalty=1.1,
+            early_stopping=True,
+            no_repeat_ngram_size=2,
         )
         
     def get_non_translatable_mask(self, texts: list[str]) -> bool:
@@ -47,14 +53,14 @@ class Translator():
         return text
     
     def translate_batch(self, batch, translation_pipeline, cols):
-        
         for col in cols:            
             # get IDs of context which is non-null
             data = batch[col]
             if col == 'trip_labels':
+                print(data[0])
                 data = [i.replace(" ", "; ") for i in data]
                 data = [i.replace("_", " ") for i in data]
-                
+                print(data[0])
             
             non_null_data_id = [i for i, x in enumerate(data) if x is not None]
             mask = self.get_non_translatable_mask(data)
@@ -71,18 +77,21 @@ class Translator():
             translations = [replacements[idx] if replacements[idx] is not None else i for idx, i in enumerate(translations)]
             
             batch[col] = translations
-            
         return batch
         
 
     
     def translate_df(self, df: pl.DataFrame, cols: list, save_name="") -> pl.DataFrame:
         # prepare dataframe for inference
+        df = df.with_columns(
+                translation=pl.lit('N/A'),
+            )
+        
         dataset = datasets.Dataset.from_dict(df.to_dict(as_series=False))
         translated_dataset = dataset.map(lambda x: self.translate_batch(x, self.pipeline, cols), batched=True, batch_size=self.batch_size)
         
         # convert back to polars dataframe
-        translated = pl.from_dict(translated_dataset.to_dict(), schema=df.schema)
+        translated = pl.from_dict(translated_dataset.to_dict())
         save_path = os.path.join(self.args.data_dir, f"multihal_{save_name}_{self.args.tgt_lang}.json")
         translated.write_json(save_path)
         return translated
