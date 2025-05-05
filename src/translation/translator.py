@@ -90,6 +90,10 @@ class Translator():
         dataset = datasets.Dataset.from_dict(df.to_dict(as_series=False))
         translated_dataset = dataset.map(lambda x: self.translate_batch(x, self.pipeline, cols), batched=True, batch_size=self.batch_size)
         
+        # add trip_labels_trans to schema
+        schema = df.schema
+        schema[f'trip_labels_{self.args.tgt_lang}'] = pl.String
+        
         # convert back to polars dataframe
         translated = pl.from_dict(translated_dataset.to_dict())
         save_path = os.path.join(self.args.data_dir, f"multihal_{save_name}_{self.args.tgt_lang}.json")
