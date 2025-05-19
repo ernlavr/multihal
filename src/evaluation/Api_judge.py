@@ -117,7 +117,7 @@ class API_Judge(jbc.JudgeBaseClass):
                 random.shuffle(shuffled_labels)
                 
                 prompt = self.get_prompt_top_triples(q, a, shuffled_labels, top_trips)
-                results = llmApi.post_api_request(self.model_name, prompt, temperature)
+                results = llmApi.post_api_request(self.model_name, prompt, temperature, self.args)
                 results = self.parse_api_results(results)
                 
                 # if we fail to get some results
@@ -259,7 +259,7 @@ class API_Judge(jbc.JudgeBaseClass):
                 # run inference on the triples' relevance to the question with respect to the expected answer
                 prompt = self.get_prompt_triple_relevance(q, a, label)
                 temp = self.args.llm_temp
-                request_response = llmApi.post_api_request(self.model_name, prompt, temp, max_tokens=256)
+                request_response = llmApi.post_api_request(self.model_name, prompt, temp, self.args, max_tokens=256)
                 if request_response is None:
                     logging.error(f"{row['id']}: API request returned None")
                     continue

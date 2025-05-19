@@ -81,7 +81,7 @@ class Paraphraser():
             # Get the main datapoint
             question = row['input']
             prompt = self.get_prompt_paraphrasing(question)
-            response = llmApi.post_api_request(self.args.llm_judge_model, prompt, self.args.llm_temp, max_tokens=2048)
+            response = llmApi.post_api_request(self.args.llm_judge_model, prompt, self.args.llm_temp, self.args, max_tokens=2048)
             results = self.parse_results(response)
             
             

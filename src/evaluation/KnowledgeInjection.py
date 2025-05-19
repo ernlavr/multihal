@@ -22,10 +22,10 @@ class KnowledgeInjectionEval():
             return prompts.get_QA_prompt(self.args.tgt_lang)
         
     def get_score(self, ground_truth, prediction):
-        return self.semantic_similarity.get_embeddings_e5(ground_truth, prediction)
-        # gt_emb = self.semantic_similarity.get_embeddings(ground_truth)
-        # pred_emb = self.semantic_similarity.get_embeddings(prediction)
-        # return self.semantic_similarity.get_similarities(gt_emb, pred_emb)
+        # return self.semantic_similarity.get_embeddings_e5(ground_truth, prediction)
+        gt_emb = self.semantic_similarity.get_embeddings(ground_truth)
+        pred_emb = self.semantic_similarity.get_embeddings(prediction)
+        return self.semantic_similarity.get_similarities(gt_emb, pred_emb)
     
     def _get_eval_dataset(self, data):
         """ Currently the score dataset and full dataset is seperate. We're missing context
@@ -91,7 +91,7 @@ class KnowledgeInjectionEval():
             prompt = prompt_func(context, question)
             if idx % 100 == 0:
                 logging.info(prompt)
-            api_response = llmApi.post_api_request(self.model_name, prompt, temp=1, max_tokens=1024)
+            api_response = llmApi.post_api_request(self.model_name, prompt, self.args, temp=1, max_tokens=1024)
             if api_response is None:
                 logging.error(f"Failed to get API response for row {row['id']}")
                 row['model_response'] = "<API_ERROR>"

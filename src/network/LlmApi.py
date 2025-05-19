@@ -4,7 +4,7 @@ import logging
 import time
 
 
-def post_api_request(model_name, prompt, temp, max_tokens=2048, attempts=3) -> dict | None:
+def post_api_request(model_name, prompt, temp, args, max_tokens=2048, attempts=3) -> dict | None:
     """ Sends an API request to OpenRouter API to generate completions for the given prompt. """
     if attempts == 0:
         return None
@@ -21,7 +21,7 @@ def post_api_request(model_name, prompt, temp, max_tokens=2048, attempts=3) -> d
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={
-                "Authorization": "Bearer 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",
+                "Authorization": f"Bearer {args.openrouter_api_key}",
                 "Content-Type": "application/json",
             },
             data=data_json

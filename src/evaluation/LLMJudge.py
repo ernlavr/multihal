@@ -56,6 +56,7 @@ class LLMJudge(jbc.JudgeBaseClass):
     
     
     def choose_best_triples(self, data: pl.DataFrame):
+        """ LLM as a judge for selection """
         logging.info("Running choose best trips")
         unprocessed_ents, processed_ents = self.split_unprocessed_ents(data)
         output = self.get_results_df()
@@ -109,6 +110,7 @@ class LLMJudge(jbc.JudgeBaseClass):
         return output
         
     def evaluate_triple_relevance(self, data: pl.DataFrame):
+        """ LLM as a judge for rating """
         # filter out rows which have no triples
         unprocessed_ents = self.get_unprocessed_datapoints(data)
         output = self.get_results_df()
