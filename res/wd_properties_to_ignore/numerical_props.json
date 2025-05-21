@@ -1,0 +1,1240 @@
+{
+    "query": " SELECT ?property ?propertyLabel ?subCl ?subClLabel WHERE { ?subCl wdt:P279* wd:Q52513243. ?property wdt:P31 ?subCl. SERVICE wikibase:label { bd:serviceParam wikibase:language  '[AUTO_LANGUAGE], en'. }} ",
+    "data": [{
+            "property": "http://www.wikidata.org/entity/P111",
+            "propertyLabel": "measured physical quantity",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2043",
+            "propertyLabel": "length",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2044",
+            "propertyLabel": "elevation above sea level",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2046",
+            "propertyLabel": "area",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2047",
+            "propertyLabel": "duration",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2048",
+            "propertyLabel": "height",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2049",
+            "propertyLabel": "width",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2050",
+            "propertyLabel": "wingspan",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2052",
+            "propertyLabel": "speed",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2053",
+            "propertyLabel": "watershed area",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2054",
+            "propertyLabel": "density",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2067",
+            "propertyLabel": "mass",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2073",
+            "propertyLabel": "vehicle range",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2075",
+            "propertyLabel": "speed of sound",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2076",
+            "propertyLabel": "temperature",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2077",
+            "propertyLabel": "under pressure",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2097",
+            "propertyLabel": "term length of position",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2101",
+            "propertyLabel": "melting point",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2102",
+            "propertyLabel": "boiling point",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2107",
+            "propertyLabel": "decomposition point",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2112",
+            "propertyLabel": "wing area",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2113",
+            "propertyLabel": "sublimation temperature",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2120",
+            "propertyLabel": "radius",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2129",
+            "propertyLabel": "immediately dangerous to life or health",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2144",
+            "propertyLabel": "frequency",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2148",
+            "propertyLabel": "distance from river mouth",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2149",
+            "propertyLabel": "clock frequency",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2160",
+            "propertyLabel": "mass excess",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2177",
+            "propertyLabel": "solubility",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2211",
+            "propertyLabel": "position angle",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2216",
+            "propertyLabel": "radial velocity",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2217",
+            "propertyLabel": "cruise speed",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2227",
+            "propertyLabel": "metallicity",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2228",
+            "propertyLabel": "maximum thrust",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2229",
+            "propertyLabel": "thermal design power",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2230",
+            "propertyLabel": "torque",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2231",
+            "propertyLabel": "explosive velocity",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2234",
+            "propertyLabel": "volume as quantity",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2248",
+            "propertyLabel": "argument of periapsis",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2250",
+            "propertyLabel": "life expectancy",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2254",
+            "propertyLabel": "maximum operating altitude",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2262",
+            "propertyLabel": "draft",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2300",
+            "propertyLabel": "minimal lethal dose",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2362",
+            "propertyLabel": "time to altitude",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2370",
+            "propertyLabel": "conversion to SI unit",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2386",
+            "propertyLabel": "diameter",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2430",
+            "propertyLabel": "takeoff roll",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2436",
+            "propertyLabel": "voltage",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2442",
+            "propertyLabel": "conversion to standard unit",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2527",
+            "propertyLabel": "earthquake magnitude on the moment magnitude scale",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2528",
+            "propertyLabel": "earthquake magnitude on the Richter magnitude scale",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2532",
+            "propertyLabel": "lowest atmospheric pressure",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2542",
+            "propertyLabel": "acceptable daily intake",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2547",
+            "propertyLabel": "perimeter",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2556",
+            "propertyLabel": "bore",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2557",
+            "propertyLabel": "stroke",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2565",
+            "propertyLabel": "global warming potential",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2583",
+            "propertyLabel": "distance from Earth",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2645",
+            "propertyLabel": "mean lifetime",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2659",
+            "propertyLabel": "topographic isolation",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2710",
+            "propertyLabel": "minimal lethal concentration",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2781",
+            "propertyLabel": "race time",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2784",
+            "propertyLabel": "modified Mercalli intensity scale",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2791",
+            "propertyLabel": "power consumed",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2793",
+            "propertyLabel": "clearance",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2797",
+            "propertyLabel": "sound power level",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2806",
+            "propertyLabel": "vibration",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2808",
+            "propertyLabel": "wavelength",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2873",
+            "propertyLabel": "time in space",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2911",
+            "propertyLabel": "time gap",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2923",
+            "propertyLabel": "focal height",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2957",
+            "propertyLabel": "throughput",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P3013",
+            "propertyLabel": "surface tension",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P3039",
+            "propertyLabel": "wheelbase",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P3041",
+            "propertyLabel": "luminous intensity",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P3157",
+            "propertyLabel": "event distance",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P4036",
+            "propertyLabel": "field of view",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P4163",
+            "propertyLabel": "magnification",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P4250",
+            "propertyLabel": "defined daily dose",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P4296",
+            "propertyLabel": "stellar rotational velocity",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P4511",
+            "propertyLabel": "vertical depth",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P5141",
+            "propertyLabel": "coastline",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P5608",
+            "propertyLabel": "fatigue limit",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P5679",
+            "propertyLabel": "electrical resistivity",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P5708",
+            "propertyLabel": "force",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P6856",
+            "propertyLabel": "average speed",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P6876",
+            "propertyLabel": "solar irradiance",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P7015",
+            "propertyLabel": "surface gravity",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P8111",
+            "propertyLabel": "recommended unit of measurement",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P8497",
+            "propertyLabel": "height of center of mass",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P12004",
+            "propertyLabel": "towing capacity",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P12571",
+            "propertyLabel": "derived from base unit",
+            "subCl": "http://www.wikidata.org/entity/Q21077852",
+            "subClLabel": "Wikidata property for physical quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1198",
+            "propertyLabel": "unemployment rate",
+            "subCl": "http://www.wikidata.org/entity/Q24710760",
+            "subClLabel": "Wikidata property of quantity type indicating a percentage"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1279",
+            "propertyLabel": "inflation rate",
+            "subCl": "http://www.wikidata.org/entity/Q24710760",
+            "subClLabel": "Wikidata property of quantity type indicating a percentage"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1689",
+            "propertyLabel": "central government debt as a percent of GDP",
+            "subCl": "http://www.wikidata.org/entity/Q24710760",
+            "subClLabel": "Wikidata property of quantity type indicating a percentage"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2661",
+            "propertyLabel": "target interest rate",
+            "subCl": "http://www.wikidata.org/entity/Q24710760",
+            "subClLabel": "Wikidata property of quantity type indicating a percentage"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2665",
+            "propertyLabel": "alcohol by volume",
+            "subCl": "http://www.wikidata.org/entity/Q24710760",
+            "subClLabel": "Wikidata property of quantity type indicating a percentage"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2834",
+            "propertyLabel": "individual tax rate",
+            "subCl": "http://www.wikidata.org/entity/Q24710760",
+            "subClLabel": "Wikidata property of quantity type indicating a percentage"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2855",
+            "propertyLabel": "VAT rate",
+            "subCl": "http://www.wikidata.org/entity/Q24710760",
+            "subClLabel": "Wikidata property of quantity type indicating a percentage"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2927",
+            "propertyLabel": "water as percent of area",
+            "subCl": "http://www.wikidata.org/entity/Q24710760",
+            "subClLabel": "Wikidata property of quantity type indicating a percentage"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P5895",
+            "propertyLabel": "foreign transaction fee",
+            "subCl": "http://www.wikidata.org/entity/Q24710760",
+            "subClLabel": "Wikidata property of quantity type indicating a percentage"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P5896",
+            "propertyLabel": "trading fee",
+            "subCl": "http://www.wikidata.org/entity/Q24710760",
+            "subClLabel": "Wikidata property of quantity type indicating a percentage"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P5898",
+            "propertyLabel": "borrowing rate",
+            "subCl": "http://www.wikidata.org/entity/Q24710760",
+            "subClLabel": "Wikidata property of quantity type indicating a percentage"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P6639",
+            "propertyLabel": "capacity factor",
+            "subCl": "http://www.wikidata.org/entity/Q24710760",
+            "subClLabel": "Wikidata property of quantity type indicating a percentage"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P6897",
+            "propertyLabel": "literacy rate",
+            "subCl": "http://www.wikidata.org/entity/Q24710760",
+            "subClLabel": "Wikidata property of quantity type indicating a percentage"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P7079",
+            "propertyLabel": "shrinkage",
+            "subCl": "http://www.wikidata.org/entity/Q24710760",
+            "subClLabel": "Wikidata property of quantity type indicating a percentage"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1113",
+            "propertyLabel": "number of episodes",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1114",
+            "propertyLabel": "quantity",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1436",
+            "propertyLabel": "collection or exhibition size",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2130",
+            "propertyLabel": "capital cost",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2137",
+            "propertyLabel": "total equity",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2138",
+            "propertyLabel": "total liabilities",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2139",
+            "propertyLabel": "total revenue",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2218",
+            "propertyLabel": "net worth",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2240",
+            "propertyLabel": "median lethal dose (LD50)",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2284",
+            "propertyLabel": "price",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2295",
+            "propertyLabel": "net profit",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2437",
+            "propertyLabel": "number of seasons",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2555",
+            "propertyLabel": "fee",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2599",
+            "propertyLabel": "block size",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2635",
+            "propertyLabel": "number of parts of this work",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2660",
+            "propertyLabel": "topographic prominence",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2664",
+            "propertyLabel": "units sold",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2769",
+            "propertyLabel": "budget",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2803",
+            "propertyLabel": "Wikidata time precision",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2896",
+            "propertyLabel": "publication interval",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2929",
+            "propertyLabel": "lighthouse range",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P3036",
+            "propertyLabel": "precipitation height",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P3063",
+            "propertyLabel": "gestation period",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P3086",
+            "propertyLabel": "speed limit",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P3487",
+            "propertyLabel": "maximal incubation period in humans",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P3575",
+            "propertyLabel": "data size",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P3740",
+            "propertyLabel": "number of works",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P4131",
+            "propertyLabel": "annual energy output",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P4214",
+            "propertyLabel": "longest observed lifespan",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P4519",
+            "propertyLabel": "payload mass",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P4876",
+            "propertyLabel": "number of records",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P4895",
+            "propertyLabel": "time index",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P5043",
+            "propertyLabel": "number of abstentions",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P5045",
+            "propertyLabel": "number of blank votes",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P5065",
+            "propertyLabel": "wind speed",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P5582",
+            "propertyLabel": "number of arrests",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P5822",
+            "propertyLabel": "admission rate",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P5899",
+            "propertyLabel": "interest rate",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P6753",
+            "propertyLabel": "number of polling stations",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P7584",
+            "propertyLabel": "age estimated by a dating method",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P7862",
+            "propertyLabel": "period of lactation",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P8093",
+            "propertyLabel": "donations",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P9180",
+            "propertyLabel": "number of at bats",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P9927",
+            "propertyLabel": "number of tries marked",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P10209",
+            "propertyLabel": "number of triples",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P10263",
+            "propertyLabel": "admission yield rate",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P11698",
+            "propertyLabel": "student retention rate",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P12469",
+            "propertyLabel": "graduation rate",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P12470",
+            "propertyLabel": "normal graduation time",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P12471",
+            "propertyLabel": "multiplier of normal graduation time",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P12549",
+            "propertyLabel": "height of letters",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P12651",
+            "propertyLabel": "authorised capital",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P13171",
+            "propertyLabel": "bequest income",
+            "subCl": "http://www.wikidata.org/entity/Q52513243",
+            "subClLabel": "Wikidata property for quantities"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1111",
+            "propertyLabel": "votes received",
+            "subCl": "http://www.wikidata.org/entity/Q107337221",
+            "subClLabel": "Wikidata property of quantity type able to indicate an absolute amount as well as a percentage"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1697",
+            "propertyLabel": "total valid votes",
+            "subCl": "http://www.wikidata.org/entity/Q107337221",
+            "subClLabel": "Wikidata property of quantity type able to indicate an absolute amount as well as a percentage"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P5044",
+            "propertyLabel": "number of spoilt votes",
+            "subCl": "http://www.wikidata.org/entity/Q107337221",
+            "subClLabel": "Wikidata property of quantity type able to indicate an absolute amount as well as a percentage"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1082",
+            "propertyLabel": "population",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1083",
+            "propertyLabel": "maximum capacity",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1098",
+            "propertyLabel": "number of speakers, writers, or signers",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1110",
+            "propertyLabel": "attendance",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1120",
+            "propertyLabel": "number of deaths",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1128",
+            "propertyLabel": "employees",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1132",
+            "propertyLabel": "number of participants",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1174",
+            "propertyLabel": "visitors per year",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1339",
+            "propertyLabel": "number of injured",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1342",
+            "propertyLabel": "number of seats",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1345",
+            "propertyLabel": "number of victims of killer",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1373",
+            "propertyLabel": "daily patronage",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1410",
+            "propertyLabel": "number of seats in assembly",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1446",
+            "propertyLabel": "number of missing",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1539",
+            "propertyLabel": "female population",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1540",
+            "propertyLabel": "male population",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1561",
+            "propertyLabel": "number of survivors",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1590",
+            "propertyLabel": "number of casualties",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1831",
+            "propertyLabel": "electorate",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1833",
+            "propertyLabel": "number of registered users/contributors",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1867",
+            "propertyLabel": "eligible voters",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1971",
+            "propertyLabel": "number of children",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2124",
+            "propertyLabel": "member count",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2196",
+            "propertyLabel": "count of students",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2573",
+            "propertyLabel": "number of out-of-school children",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P3744",
+            "propertyLabel": "number of subscribers",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P3872",
+            "propertyLabel": "patronage",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P4295",
+            "propertyLabel": "readership",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P4909",
+            "propertyLabel": "number of players in region",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P5436",
+            "propertyLabel": "number of viewers/listeners",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P5630",
+            "propertyLabel": "prisoner count",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P6125",
+            "propertyLabel": "number of volunteers",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P6343",
+            "propertyLabel": "urban population",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P6344",
+            "propertyLabel": "rural population",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P6498",
+            "propertyLabel": "illiterate population",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P6499",
+            "propertyLabel": "literate population",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P8687",
+            "propertyLabel": "social media followers",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P9077",
+            "propertyLabel": "number of aid beneficiaries",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P9107",
+            "propertyLabel": "number of vaccinations",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P9740",
+            "propertyLabel": "number of request signatories",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P9924",
+            "propertyLabel": "number of evacuated",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P10610",
+            "propertyLabel": "number of teachers",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P10623",
+            "propertyLabel": "number of blood donors",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P12712",
+            "propertyLabel": "population by native language",
+            "subCl": "http://www.wikidata.org/entity/Q111974592",
+            "subClLabel": "Wikidata property for number of people"
+        }
+    ]
+}

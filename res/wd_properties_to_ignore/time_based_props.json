@@ -1,0 +1,205 @@
+{
+    "query": "SELECT ? property ? propertyLabel WHERE { ?property wdt: P31 wd: Q18636219. SERVICE wikibase: label { bd: serviceParam wikibase: language",
+
+    "data": [{
+            "property": "http://www.wikidata.org/entity/P569",
+            "propertyLabel": "date of birth"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P570",
+            "propertyLabel": "date of death"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P571",
+            "propertyLabel": "inception"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P574",
+            "propertyLabel": "year of publication of scientific name for taxon"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P575",
+            "propertyLabel": "time of discovery or invention"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P576",
+            "propertyLabel": "dissolved, abolished or demolished date"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P577",
+            "propertyLabel": "publication date"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P580",
+            "propertyLabel": "start time"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P582",
+            "propertyLabel": "end time"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P585",
+            "propertyLabel": "point in time"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P606",
+            "propertyLabel": "first flight"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P619",
+            "propertyLabel": "UTC date of spacecraft launch"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P620",
+            "propertyLabel": "UTC date of spacecraft landing"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P621",
+            "propertyLabel": "time of object orbit decay"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P622",
+            "propertyLabel": "spacecraft docking/undocking date"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P729",
+            "propertyLabel": "service entry"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P730",
+            "propertyLabel": "service retirement"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P746",
+            "propertyLabel": "date of disappearance"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P813",
+            "propertyLabel": "retrieved"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1191",
+            "propertyLabel": "date of first performance"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1249",
+            "propertyLabel": "time of earliest written record"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1319",
+            "propertyLabel": "earliest date"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1326",
+            "propertyLabel": "latest date"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P1619",
+            "propertyLabel": "date of official opening"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2285",
+            "propertyLabel": "periapsis date (DEPRECATED)"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2669",
+            "propertyLabel": "discontinued date"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P2913",
+            "propertyLabel": "date depicted"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P3893",
+            "propertyLabel": "public domain date"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P3999",
+            "propertyLabel": "date of official closure"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P5204",
+            "propertyLabel": "date of commercialization"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P6949",
+            "propertyLabel": "announcement date"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P7103",
+            "propertyLabel": "start of covered period"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P7104",
+            "propertyLabel": "end of covered period"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P7124",
+            "propertyLabel": "date of the first one"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P7125",
+            "propertyLabel": "date of the latest one"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P7588",
+            "propertyLabel": "effective date"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P7589",
+            "propertyLabel": "date of promulgation"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P8554",
+            "propertyLabel": "earliest end date"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P8555",
+            "propertyLabel": "latest start date"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P8556",
+            "propertyLabel": "extinction date"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P9052",
+            "propertyLabel": "date postally canceled"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P9448",
+            "propertyLabel": "introduced on"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P9667",
+            "propertyLabel": "date of resignation"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P10135",
+            "propertyLabel": "recording date"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P12044",
+            "propertyLabel": "chronological designation"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P12413",
+            "propertyLabel": "date of application"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P12506",
+            "propertyLabel": "latest end date"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P12643",
+            "propertyLabel": "date popularized"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P12686",
+            "propertyLabel": "category for births in this time period"
+        },
+        {
+            "property": "http://www.wikidata.org/entity/P12687",
+            "propertyLabel": "category for deaths in this time period"
+        }
+    ]
+}
