@@ -1,8 +1,6 @@
 # Multihal
 Multilingual, knowledge-graph grounded benchmark for evaluating factuality and knowledge injection methods for LLMs.
 
-https://huggingface.co/datasets/ernlavr/multihal
-
 ## Setup
 Tested on Python 3.11
 1. Create a Python 3.11 virtual environment, either with `venv` or `conda`.
