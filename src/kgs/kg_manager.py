@@ -33,7 +33,6 @@ class KGManager():
         self.args = args
         self.bridge = br.NetworkBridge()
         self.dataframe = dataframe
-        self.spacy_model = spacy.load("en_core_web_trf")
         self.api = api.WikidataAPI()
         self.query_engine = br.NetworkBridge()
         self.hops = 2
@@ -41,7 +40,7 @@ class KGManager():
         
         # Logging
         self.ignore_properties = uti.fill_ignore_properties("res/wd_properties_to_ignore/ids_to_remove.json")
-        self.all_properties = uti.fill_all_properties('res/wd_properties_to_ignore/props_v2.json')
+        self.all_properties = uti.fill_all_properties('res/wd_properties_to_ignore/all_wd_properties_formatted.json')
 
         # Matches <QXXX> where XXX is arbitray amount of numbers
         self.obj_regex = lambda x : bool(re.match(r"^Q\d+$", x))
@@ -72,7 +71,6 @@ class KGManager():
         """ Cleanup paths by removing paths which contain irrelevant properties,
         e.g. identifiers, URLs, images, audio references..
         """
-        irrelevant_props = uti.fill_ignore_properties("res/wd_properties_to_ignore/ids_to_remove_V2.json")
         _RE_COMBINE_WHITESPACE = re.compile(r"\s+") # for cleaning up whitespaces
         
         total_paths = 0
@@ -96,7 +94,7 @@ class KGManager():
                 # check if path contains any of the irrelevant properties
                 skip = False
                 for t in trip.split():
-                    if t in irrelevant_props:
+                    if t in self.ignore_properties:
                         skip = True
                         break
                         

@@ -82,10 +82,9 @@ class Translator():
 
     
     def translate_df(self, df: pl.DataFrame, cols: list, save_name="") -> pl.DataFrame:
-        # prepare dataframe for inference
-        df = df.with_columns(
-                translation=pl.lit('N/A'),
-            )
+        # if we do english, then we don't need to translate
+        if self.args.tgt_lang == "eng":
+            return df
         
         dataset = datasets.Dataset.from_dict(df.to_dict(as_series=False))
         translated_dataset = dataset.map(lambda x: self.translate_batch(x, self.pipeline, cols), batched=True, batch_size=self.batch_size)

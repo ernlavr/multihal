@@ -23,7 +23,7 @@ class SentenceEmbeddings():
             logging.info("Generating embeddings")
 
         data = data.with_columns(
-            embeddings=pl.col('input').map_elements(lambda x: self.embedder.encode(x).tolist())
+            embeddings=pl.col('input').map_elements(lambda x: self.embedder.encode(x).tolist(), return_dtype=pl.List(pl.Float64))
         )
         
         if self.args.debug_mode:

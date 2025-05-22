@@ -1,3 +1,5 @@
+""" Credit: https://github.com/geronimi73/semscore/blob/main/semscore.py """
+
 from transformers import AutoTokenizer, AutoModel
 from accelerate import Accelerator
 from accelerate.utils import gather_object

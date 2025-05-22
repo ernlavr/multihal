@@ -130,7 +130,7 @@ class GlobalConfig(metaclass=singl.Singleton):
             n_pds=None,                        # Number of datapoints to sample for debugging
             gen_anlyz_figs=False,           
             gen_sent_embeds=False,
-            wandb_online=False,
+            wandb_online=False,         # Use Weights and Biases in online mode for experiment tracking 
             
                 # Preprocessing
             remove_refused_answers=False,
@@ -173,7 +173,7 @@ class GlobalConfig(metaclass=singl.Singleton):
             # translation
             translate=False,
             llm_translation_model=None,
-            tgt_lang=None,
+            tgt_lang="eng",
             
 
             # Model

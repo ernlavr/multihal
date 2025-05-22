@@ -2,6 +2,7 @@ import requests
 import json
 import logging
 import time
+import os
 
 
 def post_api_request(model_name, prompt, temp, args, max_tokens=2048, attempts=3) -> dict | None:
@@ -21,7 +22,7 @@ def post_api_request(model_name, prompt, temp, args, max_tokens=2048, attempts=3
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={
-                "Authorization": f"Bearer {args.openrouter_api_key}",
+                "Authorization": f"Bearer {os.getenv('OPEN_ROUTER_API_KEY')}",
                 "Content-Type": "application/json",
             },
             data=data_json

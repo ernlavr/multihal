@@ -5,14 +5,44 @@ log_level: INFO
 device: cuda      # 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # Data Settings
-data_dir: data
-datasets:
-
+output_dir: output/sweep/
+# subset_sample_size: 50  # for sampling an experimental subset of the dataset
+datasets: 
+  - 'tqa_gen'
+  - 'halueval'
+  - 'halubench'
+  - 'felm'
+  - 'defan'
+  - 'simpleqa'
+  - 'shroom2024'
+  # - 'shroom2025'
+  
 # Control Settings
 debug_mode: true             # Debug mode
 n_pds: 5                     # Number of datapoints to sample for debugging
-gen_anlyz_figs: False
-gen_sent_embeds: true
+gen_anlyz_figs: false
+gen_sent_embeds: false
+remove_duplicates: false
+remove_refused_answers: true
+save_full_data: true
+save_basic_stats: true
+parse_text_to_ents: true
+run_qa_kgs: true
+test_knowledge_injection: true
+sent_sim_metric: 'cosine'
+api_mode: 'long'
+llm_judge_method: "api"
+knowledge_inj_task: "grag"  # rag, grag, qa
+filter_paths: true
+select_labels: true
+rank_labels: true
+translate: true
+tgt_lang: eng             # eng, deu, spa, ita, por, fra; tgt_lang eng will skip the translation
+get_trip_labels: true
+
+llm_translation_model: facebook/nllb-200-distilled-600M
+llm_judge_model: "meta-llama/llama-3.3-70b-instruct"
+model_name: "meta-llama/llama-3.3-70b-instruct"
 
 # Model Settings
 sentence_embedder: sentence-transformers/all-MiniLM-L6-v2  # HuggingFace or local path

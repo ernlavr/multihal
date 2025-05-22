@@ -37,8 +37,6 @@ import src.utils.constants as const
 from types import SimpleNamespace
 import omegaconf
 
-# import src.evaluation.DeepEval as deJudge
-
 
 
 def generate_sentence_embeddings(dataset: pl.DataFrame, args: Any) -> Tuple[np.ndarray, anlyz.DatasetAnalyser]:
@@ -181,8 +179,9 @@ def query_kg(dataset: Any, args: Any) -> None:
     bridge = br.NetworkBridge()
     kg_manager = kgm.KGManager(dataset, args)
     # Query the knowledge graph with a maximum of 3 hops
-    kg_manager.query_kg(dataset, bridge, max_hops=2)
+    dataset = kg_manager.query_kg(dataset, bridge, max_hops=2)
     logging.info("Finished querying KGs")
+    return dataset
 
 def filter_paths(dataset: Any, args: Any) -> None:
     """
@@ -224,8 +223,6 @@ def evaluate_triples(dataset: Any, args: Any) -> None:
     """
     if args.llm_judge_method == 'proprietary':
         judge = llmJudge.LLMJudge(args.llm_judge_model, args)
-    elif args.llm_judge_method == 'deepeval':
-        judge = deJudge.DeepEvalJudge(args.llm_judge_model, dataset, args)
     elif args.llm_judge_method == 'api':
         judge = apiJudge.API_Judge(args.llm_judge_model, args)
     else:
@@ -239,12 +236,6 @@ def evaluate_triples(dataset: Any, args: Any) -> None:
     
     return dataset
     
-    # # judge.add_labels(dataset)
-    # outputs, relevances = judge.evaluate_triple_relevance(dataset)
-    # # Compute unique relevance values and their counts
-    # relevance_values, relevance_counts = np.unique(relevances, return_counts=True)
-    # fig.plot_pie({"Relevance count": (relevance_values, relevance_counts)},
-    #              "LLM as judge relevance counts;")
     
 def translate(dataset: Any, dataset_pp, args: Any) -> None:
     """
@@ -307,7 +298,7 @@ def main() -> None:
         omegaconf.OmegaConf.save(config=args.__dict__, f=f"{args.conf_dir}/args_sweep.yaml")
         logging.info(f"New sweep args: {pprint.pformat(vars(args))}")
     
-    if args.tgt_lang is None:
+    if args.tgt_lang is None and args.load_premade_dataset is not None:
         lang_codes = ["fra", "spa", "ita", "por", "deu"]
         args.tgt_lang = "eng"
         for code in lang_codes:
@@ -375,7 +366,7 @@ def main() -> None:
         _, dataset_pp = pp.Paraphraser(args).generate_paraphrasings(dataset, data_manager.get_df_pp())
         
     if args.translate:
-        translate(dataset, None, args)
+        dataset = translate(dataset, None, args)
         
     
     if args.test_knowledge_injection:
@@ -383,20 +374,6 @@ def main() -> None:
         ki_eval.run_eval(dataset, "grag")
         ki_eval.run_eval(dataset, "qa")
 
-
-# sweep_configuration = {
-#     "method": "random",
-#     "metric": {"goal": "minimize", "name": "score"},
-#     "parameters": {
-#         "x": {"max": 0.1, "min": 0.01},
-#         "y": {"values": [1, 3, 7]},
-#     },
-# }
-
-# # 3: Start the sweep
-# sweep_id = wandb.sweep(sweep=sweep_configuration, project="multihal")
-
-# wandb.agent(sweep_id, function=main, count=10)
 
 if __name__ == '__main__':
     logging.info("Starting main")
