@@ -132,23 +132,23 @@ class GlobalConfig(metaclass=singl.Singleton):
             gen_sent_embeds=False,
             wandb_online=False,         # Use Weights and Biases in online mode for experiment tracking 
             
-                # Preprocessing
+            # Preprocessing
             remove_refused_answers=False,
             sent_sim_metric=None,           # string, either 'bleu' or 'cosine'
             remove_duplicates=False,        # removes duplicates based on sentence embedding model
             
-                # Entity matching
+            # Entity matching
             parse_text_to_ents=False,        # parses text to wikidata entities with Falcon2.0
             api_mode='short',                # string, either 'long' or 'short' for Falcon2.0 mode
             
-                # Query wikidata
+            # Query wikidata
             run_qa_kgs=False,
 
-                # Knowledge Injection, baseline experiments
+            # Knowledge Injection, baseline experiments
             knowledge_inj_task=None,         # string, either 'grag', 'rag' or 'qa'
             test_knowledge_injection=False,  # Test the knowledge injection
             
-                # LLM Judge
+            # LLM Judge
             llm_judge_method=None,          # string, either 'proprietary' or 'deepeval'
             get_trip_labels=None,           # for retrieving labels from WD. 99% of time enable filter_paths
             filter_paths=None,              # to clean up KG paths (remove unnecessary ones, unify whitespacing)
@@ -157,7 +157,7 @@ class GlobalConfig(metaclass=singl.Singleton):
             llm_judge_model=None,           # model definition for LLM-as-judge
             llm_temp=0.3,                   # temperature for LLM-as-judge
             
-                # Paraphrasings
+            # Paraphrasings
             generate_paraphrasings=None,    # bool, whether to generate paraphrasings
             num_paraphrasings=None,         # int, number of paraphrasings to generate
             
@@ -171,9 +171,9 @@ class GlobalConfig(metaclass=singl.Singleton):
             run_clustering=False,
             
             # translation
-            translate=False,
-            llm_translation_model=None,
-            tgt_lang="eng",
+            translate=False,                # run the translation stage
+            llm_translation_model=None,     # LLM used for translation
+            tgt_lang="eng",                 # target language for translation; eng, deu, spa, fra, ita, por
             
 
             # Model
