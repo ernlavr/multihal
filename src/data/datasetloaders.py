@@ -114,7 +114,7 @@ def _load_defan() -> datasets.DatasetDict:
         Therefore, we also capture the paraphrasings seperately with reference to first question.
     """
     BATCH_SIZE, PARAPHRASE_SIZE = 15, 14
-    DEF_AN_DIR = '/Users/dr84sy/Documents/PhD/projects/multihal/multihal/res/defan'
+    DEF_AN_DIR = 'res/defan'
     output = datasets.DatasetDict({'val': None, 'val_paraphrased': None})
     starting_id = 0
     

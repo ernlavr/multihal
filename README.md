@@ -2,7 +2,8 @@
 Multilingual, knowledge-graph grounded benchmark for evaluating factuality and knowledge injection methods for LLMs.
 
 ## Setup
-Tested on Python 3.11
+Tested on Python 3.11, MacBook Pro M3 18GB. *Optionally* you can use a CUDA-compatible GPU for faster inference for translation and sentence-transformers.
+
 1. Create a Python 3.11 virtual environment, either with `venv` or `conda`.
 2. Install the requirements:
 ```bash
@@ -24,6 +25,14 @@ The default configuration arguments and their documentation is defined in `src.u
 
 5. Output is written to `output/` directory with a timestamped folder.
 
+6. Alternatively you can also run the code by building a Docker image:
+```bash
+docker build . -t multihal:latest
+docker run --rm multihal:latest
+
+# or alternatively to run the code in interactive mode
+docker run --rm -it --entrypoint sh multihal:latest
+```
 ## Table and Figure Generation from the Original Paper
 We also supply our raw results in the `results/` directory. To generate the tables and figures from the original paper by running the `results/generate_results.ipynb` notebook. Output will be written to `results/output/` directory.
 
