@@ -57,7 +57,9 @@ def get_dataframes(result_dir):
             dataframes.append((name, lang, task, df))
     return dataframes
 
-result_dir = "results/main_results"
+# dir of this file
+this_dir = os.path.dirname(os.path.abspath(__file__))
+result_dir = os.path.join(this_dir, "main_results")
 dfs = get_dataframes(result_dir)
 print(f"Found {len(dfs)} dataframes")
 
@@ -106,28 +108,29 @@ pipelne_model = pipeline(
         tokenizer=AutoTokenizer.from_pretrained('google/flan-t5-base'),
         trust_remote_code=True
     )
-for i in range(0, len(dfs), 1):
-    if 'eng' not in dfs[i][1]:
-        continue
-    # print out condition, hallc labels % and confidence scores
-    print(f"Condition: {dfs[i][0]} ({dfs[i][1]}-{dfs[i][2]})")
+
+results = []
+
+# for i in range(0, len(dfs), 1):
+#     if 'eng' not in dfs[i][1]:
+#         continue
+#     # print out condition, hallc labels % and confidence scores
+#     print(f"Condition: {dfs[i][0]} ({dfs[i][1]}-{dfs[i][2]})")
         
-    # perform vectara test
-    data = dfs[i][3]
-    hallc_labels, confidence_scores = vectara_test(pipelne_model, data, grag=True if 'rag' in dfs[i][2].lower() else False)
+#     # perform vectara test
+#     data: pl.DataFrame = dfs[i][3]
+#     hallc_labels, confidence_scores = vectara_test(pipelne_model, data, grag=True if 'rag' in dfs[i][2].lower() else False)
     
-    # count how many hallc_labels are 'hallucinated'
-    label_counts = Counter(hallc_labels)
-    total = len(hallc_labels)
-    for label, count in label_counts.items():
-        percentage = (count / total) * 100
-        print(f"  {label}: {count} ({percentage:.2f}%)")
-        if label == 'hallucinated':
-            hallucinated_confidences = [confidence_scores[j] for j in range(len(hallc_labels)) if hallc_labels[j] == 'hallucinated']
-            avg_confidence = sum(hallucinated_confidences) / len(hallucinated_confidences)
-            print(f"    Average confidence for 'hallucinated': {avg_confidence:.4f}")
-            
+#     data = data.with_columns(
+#         pl.Series("vectara_labels", hallc_labels),
+#         pl.Series("vectara_confidence", confidence_scores)
+#     )
     
+#     # create directory supplementary_experiments if it does not exist
+#     os.makedirs(os.path.join(this_dir, "supplementary_exp"), exist_ok=True)
+#     data.write_json(os.path.join(this_dir, "supplementary_exp", f"vectara_{dfs[i][0]}_{dfs[i][1]}_{dfs[i][2]}.json"))
+    
+        
     
 ###
 ### -------- Perform NLI Test
@@ -141,7 +144,7 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 
 
 
-def get_entailment_percentage(model_name, dataset, device, batch_size=32):
+def get_entailment_percentage(model_name, dataset, device, batch_size=64):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForSequenceClassification.from_pretrained(model_name).to(device)
     model.eval()
@@ -164,6 +167,7 @@ def get_entailment_percentage(model_name, dataset, device, batch_size=32):
         hypotheses.append(hypothesis)
 
     # Process in batches
+    labels = []
     for start in tqdm(range(0, total_number_of_datapoints, batch_size)):
         end = start + batch_size
         batch_premises = premises[start:end]
@@ -182,6 +186,11 @@ def get_entailment_percentage(model_name, dataset, device, batch_size=32):
             predictions = torch.softmax(outputs.logits, dim=-1)  # [batch, 3]
             pred_labels = predictions.argmax(dim=-1).tolist()
 
+
+        # convert IDs to labels
+        labels.extend(pred_labels)
+        
+
         # Count results
         for label_id in pred_labels:
             label = label_names[label_id]
@@ -192,10 +201,15 @@ def get_entailment_percentage(model_name, dataset, device, batch_size=32):
             elif label == "contradiction":
                 number_of_contradictions += 1
 
+    # add labels to dataset
+    dataset = dataset.with_columns(
+        pl.Series("nli_labels", [label_names[l] for l in labels])
+    )
+
     percentage_entails = (number_of_entails / total_number_of_datapoints) * 100
     percentage_neutrals = (number_of_neutrals / total_number_of_datapoints) * 100
     percentage_contradictions = (number_of_contradictions / total_number_of_datapoints) * 100
-    return percentage_entails, percentage_neutrals, percentage_contradictions
+    return dataset, percentage_entails, percentage_neutrals, percentage_contradictions
     
 
 for i in range(0, len(dfs), 2):        
@@ -206,11 +220,17 @@ for i in range(0, len(dfs), 2):
     # report percentage of entailments
     model_name = "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7"
     print(f"Using model {model_name} for entailment classification")
-    kg_entails, kg_neutral, kg_contradiction = get_entailment_percentage(model_name, kg_rag, device)
+    ds_kgrag, kg_entails, kg_neutral, kg_contradiction = get_entailment_percentage(model_name, kg_rag, device)
     print(f"Percentage of entailments KG-RAG: {kg_entails:.2f}%; Neutral: {kg_neutral:.2f}%; Contradiction: {kg_contradiction:.2f}%")
+    
 
-    qa_entails, qa_neutral, qa_contradiction = get_entailment_percentage(model_name, qa, device)
+    ds_qa, qa_entails, qa_neutral, qa_contradiction = get_entailment_percentage(model_name, qa, device)
     print(f"Percentage of entailments QA: {qa_entails:.2f}%; Neutral: {qa_neutral:.2f}%; Contradiction: {qa_contradiction:.2f}%")
+    
+    # save the datasets to json
+    os.makedirs(os.path.join(this_dir, "supplementary_exp"), exist_ok=True)
+    ds_kgrag.write_json(os.path.join(this_dir, "supplementary_exp", f"nli_{dfs[i][0]}_{dfs[i][1]}_{dfs[i][2]}.json"))
+    ds_qa.write_json(os.path.join(this_dir, "supplementary_exp", f"nli_{dfs[i+1][0]}_{dfs[i+1][1]}_{dfs[i+1][2]}.json"))
 
 # get scores of full dataset
 print(f"Done at {time.ctime()}")
