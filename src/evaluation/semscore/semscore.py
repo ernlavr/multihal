@@ -12,10 +12,14 @@ class EmbeddingModelWrapper():
 
     def __init__(self, model_path=None, bs=8):
         if model_path is None: model_path = self.DEFAULT_MODEL
+        self.model_name = model_path
         self.bs = bs
         self.cos = nn.CosineSimilarity(dim=1, eps=1e-6)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model, self.tokenizer = self.load_model(model_path)
+
+    def get_model_name(self):
+        return self.model_name
 
     def load_model(self, model_path):
         model = AutoModel.from_pretrained(
@@ -85,7 +89,7 @@ class EmbeddingModelWrapper():
         scores = (embeddings[:1] @ embeddings[1:].T)
         
         # move to cpu and convert to numpy
-        scores = scores.detach().cpu().numpy().item()
+        scores = scores.detach().cpu().numpy()
         return scores
 
     def get_similarities(self, x, y=None):

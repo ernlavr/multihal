@@ -6,6 +6,7 @@ import numpy as np
 import logging
 from tqdm import tqdm
 from src.evaluation.semscore.semscore import EmbeddingModelWrapper
+import wandb
 
 class KnowledgeInjectionEval():
     def __init__(self, args):
@@ -84,7 +85,7 @@ class KnowledgeInjectionEval():
             if task == 'rag':
                 context = row['context']
             if task == 'grag':
-                context = row['trip_labels'].replace("_", " ")
+                context = row['trip_labels'].replace("_", " ").replace(";", " ")
             if task != 'qa' and (context is None or context == 'N/A'):
                 continue
             
@@ -111,5 +112,12 @@ class KnowledgeInjectionEval():
             _datapoint = pl.from_dict(row, strict=False)
             data = data.update(_datapoint, on="id")
             data.write_json(f"{self.args.data_dir}/llm_eval_{self.model_name.replace('/', '-')}_full_{self.args.tgt_lang}_{task}.json")
-            
+        
+        # wandb log row['sem_score'] average
+        
+        wandb.log({
+            f"sem_score_{task}": output['sem_score'].mean(),
+            f"sem_score_std_{task}": output['sem_score'].std(),
+        })
+        
         return data
