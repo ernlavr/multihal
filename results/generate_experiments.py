@@ -111,24 +111,24 @@ pipelne_model = pipeline(
 
 results = []
 
-# for i in range(0, len(dfs), 1):
-#     if 'eng' not in dfs[i][1]:
-#         continue
-#     # print out condition, hallc labels % and confidence scores
-#     print(f"Condition: {dfs[i][0]} ({dfs[i][1]}-{dfs[i][2]})")
+for i in range(0, len(dfs), 1):
+    if 'eng' not in dfs[i][1]:
+        continue
+    # print out condition, hallc labels % and confidence scores
+    print(f"Condition: {dfs[i][0]} ({dfs[i][1]}-{dfs[i][2]})")
         
-#     # perform vectara test
-#     data: pl.DataFrame = dfs[i][3]
-#     hallc_labels, confidence_scores = vectara_test(pipelne_model, data, grag=True if 'rag' in dfs[i][2].lower() else False)
+    # perform vectara test
+    data: pl.DataFrame = dfs[i][3]
+    hallc_labels, confidence_scores = vectara_test(pipelne_model, data, grag=True if 'rag' in dfs[i][2].lower() else False)
     
-#     data = data.with_columns(
-#         pl.Series("vectara_labels", hallc_labels),
-#         pl.Series("vectara_confidence", confidence_scores)
-#     )
+    data = data.with_columns(
+        pl.Series("vectara_labels", hallc_labels),
+        pl.Series("vectara_confidence", confidence_scores)
+    )
     
-#     # create directory supplementary_experiments if it does not exist
-#     os.makedirs(os.path.join(this_dir, "supplementary_exp"), exist_ok=True)
-#     data.write_json(os.path.join(this_dir, "supplementary_exp", f"vectara_{dfs[i][0]}_{dfs[i][1]}_{dfs[i][2]}.json"))
+    # create directory supplementary_experiments if it does not exist
+    os.makedirs(os.path.join(this_dir, "supplementary_exp"), exist_ok=True)
+    data.write_json(os.path.join(this_dir, "supplementary_exp", f"vectara_{dfs[i][0]}_{dfs[i][1]}_{dfs[i][2]}.json"))
     
         
     
