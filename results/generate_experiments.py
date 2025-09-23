@@ -9,6 +9,9 @@ import scipy.stats as stats
 import numpy as np
 import matplotlib.pyplot as plt
 import polars as pl
+import time
+
+print(f"Starting analysis at {time.ctime()}")
 
 def get_dataframes(result_dir):
     dataframes = []
@@ -66,7 +69,7 @@ dfs = sorted(dfs, key=lambda x: (["eng", "deu", "fra", "ita", "spa", "por"].inde
 ###
 ### -------- Perform Vectara Hallucination Test --------
 ###
-print("vectaring...")
+print(f"vectaring... {time.ctime()}")
 
 from transformers import pipeline, AutoTokenizer
 from collections import Counter
@@ -130,7 +133,7 @@ for i in range(0, len(dfs), 1):
 ###
 ### -------- Perform NLI Test
 ###
-print("nling...")
+print(f"nling... {time.ctime()}")
 
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
@@ -211,3 +214,4 @@ for i in range(0, len(dfs), 2):
     print(f"Percentage of entailments QA: {qa_entails:.2f}%; Neutral: {qa_neutral:.2f}%; Contradiction: {qa_contradiction:.2f}%")
 
 # get scores of full dataset
+print(f"Done at {time.ctime()}")
