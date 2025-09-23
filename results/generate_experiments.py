@@ -109,13 +109,12 @@ pipelne_model = pipeline(
 for i in range(0, len(dfs), 1):
     if 'eng' not in dfs[i][1]:
         continue
+    # print out condition, hallc labels % and confidence scores
+    print(f"Condition: {dfs[i][0]} ({dfs[i][1]}-{dfs[i][2]})")
         
     # perform vectara test
     data = dfs[i][3]
     hallc_labels, confidence_scores = vectara_test(pipelne_model, data, grag=True if 'rag' in dfs[i][2].lower() else False)
-    
-    # print out condition, hallc labels % and confidence scores
-    print(f"Condition: {dfs[i][0]} ({dfs[i][1]}-{dfs[i][2]})")
     
     # count how many hallc_labels are 'hallucinated'
     label_counts = Counter(hallc_labels)
