@@ -43,3 +43,16 @@ We perform our evaluation based on semantic similarity computed using sentence-t
 
 ## License
 This project is licensed under CC-BY-4.0 license.
+
+## Bibtex
+If you find this work useful, please consider citing 
+
+```
+@article{lavrinovics2025multihal,
+  title={Multihal: Multilingual dataset for knowledge-graph grounded evaluation of LLM hallucinations},
+  author={Lavrinovics, Ernests and Biswas, Russa and Hose, Katja and Bjerva, Johannes},
+  journal={arXiv preprint arXiv:2505.14101},
+  year={2025}
+}
+
+```
